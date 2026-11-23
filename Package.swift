@@ -47,7 +47,7 @@ let package = Package(
     targets: [
         .executableTarget(name: "CraPluginHost", path: "Sources/CraPluginHost",
                           linkerSettings: [.linkedFramework("JavaScriptCore")]),
-    ] + (chromiumEngine ? [
+    ] as [Target] + (chromiumEngine ? [
         // The bridge lives in Chrome's framework (engine/chromium/cra/bridge.mm); this target is its header.
         .target(
             name: "CraCEF",
@@ -60,7 +60,7 @@ let package = Package(
                 .linkedFramework("AppKit"),
             ]
         ),
-    ] : [
+    ] as [Target] : [
         // Objective-C++ bridge between Swift and CEF.
         .target(
             name: "CraCEF",
@@ -93,7 +93,7 @@ let package = Package(
                 .linkedFramework("IOSurface"),
             ]
         ),
-    ]) + [
+    ] as [Target]) + [
         // Dock tile plug-in: keeps the icon picked in Settings after Cra quits.
         .target(
             name: "CraDockTile",

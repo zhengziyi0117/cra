@@ -1,7 +1,6 @@
 import Foundation
 
-/// Where Apple Intelligence's on-device model stands for Cra, as Settings ▸ Max explains it. Max
-/// features run only on that model (FoundationModels), so every case but `available` keeps them off.
+/// Where Apple Intelligence's on-device model stands for Cra, as Settings ▸ Max explains it.
 public enum AppleIntelligenceStatus: Equatable, Sendable {
     case available
     /// Off in System Settings ▸ Apple Intelligence & Siri.

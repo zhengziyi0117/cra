@@ -235,7 +235,7 @@ final class CommandBarController {
     /// the bar closes and the model plans what was typed. Anything else is Return.
     func commitInstantLinks() {
         guard let (selected, typed) = committed() else { return }
-        if let onInstantLinks, InstantLinksService.shared.isAvailable(store), let phrase = instantLinksPhrase(selected) {
+        if let onInstantLinks, InstantLinksService.shared.isAvailable(store, space: focusedSpaceID), let phrase = instantLinksPhrase(selected) {
             // Before close(): the row needs to know whether the New Tab row is the open one.
             onInstantLinks(phrase, engine.searchEngine)
             close()

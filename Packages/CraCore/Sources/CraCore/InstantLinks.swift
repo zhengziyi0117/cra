@@ -16,7 +16,7 @@ public enum InstantLinks {
         case tab, folder, split
     }
 
-    public struct Search: Equatable, Sendable {
+    public struct Search: Equatable, Sendable, Decodable {
         public var query: String
         /// How many results to open.
         public var count: Int
@@ -27,7 +27,7 @@ public enum InstantLinks {
         }
     }
 
-    public struct Plan: Equatable, Sendable {
+    public struct Plan: Equatable, Sendable, Decodable {
         public var title: String
         public var format: Format
         public var searches: [Search]

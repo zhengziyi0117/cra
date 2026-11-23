@@ -3,12 +3,16 @@ import Foundation
 import FoundationModels
 #endif
 
-/// Tidy Tab Titles' call to the Mac's own model: one fresh session per title, Arc's answer
+/// Tidy Tab Titles' call to the selected model: one fresh session per title, Arc's answer
 /// schema, and the context check before the request is sent. TidyTitlesService decides when to
 /// ask and what to do with the answer.
 @MainActor
 enum TidyTitlesModel {
     static func respond(instructions: String, prompt: String, responseLimit: Int) async throws -> TidyTitles.Answer {
+        if ChatGPTMax.shared.selected {
+            return try await ChatGPTMax.shared.answer(instructions, prompt: prompt,
+                shape: #"{"filtered":"clean title","rewritten":"1–3 word title"}"#)
+        }
         #if canImport(FoundationModels)
         if #available(macOS 26.0, *) {
             try Task.checkCancellation()

@@ -83,7 +83,7 @@ To release a personal change sooner, run **Actions → Sync upstream release →
 | Peek | ✅ |
 | Netflix, Disney+, Spotify and other DRM streaming | ✅ In Safari's engine with Apple's FairPlay; Disney+ and Prime Video [confirmed playing signed in](docs/protected-media.md#confirmed-playing), and any other site that asks for DRM can switch over |
 | Notes | Left out: Arc itself no longer makes new Notes |
-| Arc Max | Ask on Page, Instant Links, Tidy Tabs, Tidy Tab Titles, Tidy Downloads and 5-Second Previews, on the Mac's Apple Intelligence; only Instant Links' search queries leave the Mac, to the search engine |
+| Arc Max | Ask on Page, Instant Links, Tidy Tabs, Tidy Tab Titles, Tidy Downloads and 5-Second Previews, with Apple Intelligence (default) or a connected ChatGPT plan |
 
 The [roadmap](https://crabrowser.app/roadmap) lists what's next.
 
@@ -141,6 +141,8 @@ anonymous daily usage stats and crash reports, never the sites you visit
 `~/Library/Application Support/Cra`. A built-in blocker stops
 requests to more than 22,000 ad and tracker domains.
 
+On macOS, select **Settings ▸ Max ▸ AI provider ▸ ChatGPT** and **Sign in with ChatGPT** to use an eligible ChatGPT plan. Enabled features send the page excerpts, conversation, search terms, titles, domains or filenames needed for the request to OpenAI. Instant Links also sends searches to your search engine. Select Apple Intelligence to return to on-device processing.
+
 Pages run in Chromium's sandbox with site isolation, passwords and cookies are encrypted
 with a key in your Keychain, and new Chromium releases are checked daily and shipped as
 signed updates. [crabrowser.app/security](https://crabrowser.app/security) says what is
@@ -167,6 +169,8 @@ Summarize run on the iPhone's own Apple Intelligence. Its code is in [`iOS/`](iO
 status in [docs/ios-parity.md](docs/ios-parity.md).
 
 ## Build from source
+
+The Mac build uses Node.js 22.12 or later and npm to package the [OpenAI DevKit](https://github.com/openai/sign-in-with-chatgpt-devkit). The app includes its own Node runtime. The bundled DevKit has a [noncommercial license](https://github.com/openai/sign-in-with-chatgpt-devkit/blob/0a36fefeb913055c8c7a1a29b63d82b96b2e841a/LICENSE).
 
     scripts/build.sh          # fetches the engine on first run, builds build/Cra.app
     scripts/run.sh            # build if needed, then open

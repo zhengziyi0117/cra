@@ -5,7 +5,7 @@ import Observation
 import FoundationModels
 #endif
 
-/// Tidy Downloads on the Mac's Apple Intelligence model (Arc Max's renameDownloads): a finished
+/// Tidy Downloads (Arc Max's renameDownloads): a finished
 /// download gets a readable name from its file name, the tab it came from and the site, and the
 /// file on disk is renamed. The sidebar's card above the download bin says so ("Download renamed
 /// to:", Arc's SidebarBanner) with a way back; reverting says "Download name reverted!" in Cra's toast.
@@ -249,6 +249,12 @@ final class TidyDownloadsService {
                 .replacingOccurrences(of: "_", with: " ").replacingOccurrences(of: "-", with: " ")
                 .filter { !$0.isNumber }.split(separator: " ").joined(separator: " ").capitalized
             return ext.isEmpty ? stem : "\(stem).\(ext)"
+        }
+        if ChatGPTMax.shared.selected {
+            struct Filename: Decodable { let newName: String }
+            let answer: Filename? = try? await ChatGPTMax.shared.answer(TidyDownloads.instructions(for: request),
+                prompt: TidyDownloads.prompt(request), shape: #"{"newName":"new filename"}"#)
+            return answer?.newName
         }
         #if canImport(FoundationModels)
         if #available(macOS 26.0, *) {

@@ -56,7 +56,7 @@ struct TabSleepPolicyTests {
     }
 
     @Test(.bug("https://github.com/VictorKildahl/cra/issues/153")) func eightHoursKeepsThemToo() {
-        let p = pages(hiddenMinutesAgo: [9 * 60])
+        let p = pages(hiddenMinutesAgo: [9.0 * 60])
         #expect(TabSleepPolicy.timer(.eightHours).candidates(p, visible: [visible], now: now) == [])
         #expect(TabSleepPolicy.timer(.eightHours).candidates(p, visible: [visible], protectedRecent: 1, now: now) == [p[1].id])
     }

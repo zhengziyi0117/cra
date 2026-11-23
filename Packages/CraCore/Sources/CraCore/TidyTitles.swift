@@ -10,7 +10,7 @@ public enum TidyTitles {
     static let maximumLength = 512
     public static let responseTokenLimit = 384
 
-    public struct Answer {
+    public struct Answer: Decodable {
         public var filtered: String
         public var rewritten: String
 

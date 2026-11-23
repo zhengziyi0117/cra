@@ -7,6 +7,14 @@ struct LinkSummaryTests {
 
     // MARK: - Which hovers show a card
 
+    @Test func cloudPreviewSendsOnlyTheHostFromTheURL() {
+        let input = LinkSummaryPrompt.fitted(url: "https://example.com/private-path?secret=value#section",
+            content: .init(title: "Article", bodyText: "Page excerpt"), searchQuery: "topic", language: "English")
+        let prompt = input.promptWithHostOnly
+        #expect(prompt.contains("example.com") && prompt.contains("Page excerpt") && prompt.contains("topic"))
+        #expect(!prompt.contains("private-path") && !prompt.contains("secret") && !prompt.contains("#section"))
+    }
+
     @Test func autoSitesAreArcsThree() {
         #expect(LinkSummaryPolicy.autoSite(page: u("https://news.ycombinator.com/")) == .hackerNews)
         #expect(LinkSummaryPolicy.autoSite(page: u("https://news.ycombinator.com/item?id=1")) == .hackerNews)

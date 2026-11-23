@@ -174,7 +174,7 @@ public enum AskOnPage {
         }
     }
 
-    public struct Draft: Equatable, Sendable {
+    public struct Draft: Equatable, Sendable, Decodable {
         public var excerpts: [String]?
         public var answer: String?
         public var keyAnswer: String?

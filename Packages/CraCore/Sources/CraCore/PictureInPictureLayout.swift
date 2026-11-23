@@ -31,7 +31,7 @@ public enum PictureInPictureLayout {
     /// (10 from 400 pt) around a 12 pt glyph: a button's centre is 26, 30 or 32 pt from the
     /// edges. The reporter measured 26 on a tiny window (#246).
     public static func buttonCentreInset(width: CGFloat) -> CGFloat {
-        width < 280 ? 12 + 8 + 6 : width < 400 ? 16 + 8 + 6 : 16 + 10 + 6
+        width < 280 ? 26 : width < 400 ? 30 : 32
     }
 
     /// Play/pause in the middle with the ±15 s skips on either side, sized by Arc's size classes

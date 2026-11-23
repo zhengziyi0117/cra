@@ -5,6 +5,7 @@ cd "$(dirname "$0")/.."
 TEST_DIR="$(mktemp -d "${TMPDIR:-/tmp}/cra-tidy-tabs-service.XXXXXX")"
 trap 'rm -rf "$TEST_DIR"' EXIT
 xcrun swiftc -swift-version 5 -parse-as-library ${CRA_TEST_SWIFTC_FLAGS:-} \
+  Sources/Cra/Services/ChatGPTMax.swift \
   Packages/CraCore/Sources/CraCore/*.swift Packages/CraCore/Sources/CraCore/Perf/*.swift Sources/Cra/Perf/Perf.swift \
   Sources/Cra/Services/Import/*.swift \
   Sources/Cra/Services/SidebarStore.swift Sources/Cra/Services/SidebarIntegrity.swift Sources/Cra/Services/Persistence.swift \

@@ -3,7 +3,7 @@ import Foundation
 import FoundationModels
 #endif
 
-/// The feature's on-device adapter. Every attempt owns its fitted ID mapping and a fresh session.
+/// The feature's model adapter. Every attempt owns its fitted ID mapping and a fresh session.
 @MainActor
 enum TidyTabsModel {
     struct Answer {
@@ -37,6 +37,13 @@ enum TidyTabsModel {
     }
 
     private static func nativeAttempt(_ initial: TidyTabs.Request) async throws -> Answer {
+        if ChatGPTMax.shared.selected {
+            struct Assignment: Decodable { let tab: Int; let group: String }
+            struct Groups: Decodable { let assignments: [Assignment] }
+            let groups: Groups = try await ChatGPTMax.shared.answer(TidyTabs.instructions, prompt: initial.prompt,
+                shape: #"{"assignments":[{"tab":0,"group":"Group name"}]}"#)
+            return Answer(request: initial, proposals: TidyTabs.proposals(groups.assignments.map { ($0.tab, $0.group) }))
+        }
         #if canImport(FoundationModels)
         if #available(macOS 26.0, *) {
             let model = SystemLanguageModel.default

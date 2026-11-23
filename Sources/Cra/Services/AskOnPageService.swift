@@ -42,7 +42,7 @@ final class AskOnPageService {
         switch failure {
         case .unreadablePage: return AskOnPagePrompt.unreadable
         case .inputTooLong: return "This question is too long. Try a shorter question."
-        case .unavailable: return "Apple Intelligence isn’t available right now."
+        case .unavailable: return ChatGPTMax.shared.selected ? "Check your ChatGPT connection in Max settings." : "Apple Intelligence isn’t available right now."
         case .timedOut: return "Sorry, the answer took too long. Try again."
         default: return AskOnPagePrompt.failed
         }
@@ -70,7 +70,7 @@ final class AskOnPageService {
         self.browsers = browsers; self.enabled = enabled; self.available = available
         self.clock = clock ?? LiveScheduler.shared
         self.countTokens = countTokens ?? AskOnPageLocalModel.tokenCount
-        self.estimatedTokenCount = countTokens == nil && AskOnPageLocalModel.estimatesTokens
+        self.estimatedTokenCount = countTokens == nil
         self.generate = generate ?? AskOnPageLocalModel.stream
         if let settingsStore {
             invalidationObservers.append(NotificationCenter.default.addObserver(
@@ -182,7 +182,9 @@ final class AskOnPageService {
 
     private func start(page: AskOnPagePrompt.Page, question: String, language: String, date: String, id: UUID) {
         let history = history
-        let generate = generate, countTokens = countTokens, estimated = estimatedTokenCount
+        let generate = generate, countTokens = countTokens, estimated = estimatedTokenCount && AskOnPageLocalModel.estimatesTokens
+        let page = ChatGPTMax.shared.selected ? AskOnPagePrompt.Page(url: URL(string: page.url)?.host ?? "",
+            title: page.title, text: page.text, wasTruncated: page.wasTruncated) : page
         task = Task { [weak self] in
             do {
                 var overflowed = false, echoes = 0
@@ -299,6 +301,7 @@ enum AskOnPageLocalModel {
     /// How many times in a row the test model copied the request back.
     private static var fakeEchoes = 0
     static var isAvailable: Bool {
+        if ChatGPTMax.shared.selected { return ChatGPTMax.shared.available }
         if TidyTabsService.fakeModel { return true }
         #if canImport(FoundationModels)
         if #available(macOS 26.0, *), case .available = SystemLanguageModel.default.availability { return true }
@@ -306,6 +309,7 @@ enum AskOnPageLocalModel {
         return false
     }
     static var estimatesTokens: Bool {
+        if ChatGPTMax.shared.selected { return true }
         if TidyTabsService.fakeModel { return true }
         if #available(macOS 26.4, *) { return false }
         return true
@@ -313,6 +317,7 @@ enum AskOnPageLocalModel {
     static var tokenCount: AskOnPagePrompt.TokenCount {
         { instructions, prompt in
             try Task.checkCancellation()
+            if ChatGPTMax.shared.selected { return (instructions.utf8.count + prompt.utf8.count + 2) / 3 + 256 }
             // Deterministic UI fixture only: no tokenizer or on-device model is invoked.
             if TidyTabsService.fakeModel { return (instructions.utf8.count + prompt.utf8.count + 2) / 3 + 256 }
             #if canImport(FoundationModels)
@@ -381,6 +386,18 @@ enum AskOnPageLocalModel {
 
     static func stream(_ fitted: AskOnPagePrompt.Fitted, update: @escaping @MainActor (AskOnPage.Draft) -> Void) async throws -> AskOnPage.Draft {
         guard isAvailable else { throw AskOnPageService.Failure.unavailable }
+        if ChatGPTMax.shared.selected {
+            let history = fitted.turns.flatMap { [ChatGPTHelper.Message(role: "user", content: $0.question),
+                                                  ChatGPTHelper.Message(role: "assistant", content: $0.answer)] }
+            if fitted.form == .summary {
+                struct Summary: Decodable { let points: [String] }
+                let summary: Summary = try await ChatGPTMax.shared.answer(fitted.instructions, prompt: fitted.prompt,
+                    shape: #"{"points":["one short point per item"]}"#, history: history)
+                return .init(excerpts: [], answer: AskOnPage.listed(points: summary.points))
+            }
+            return try await ChatGPTMax.shared.answer(fitted.instructions, prompt: fitted.prompt,
+                shape: #"{"excerpts":["exact source sentence"],"answer":"answer","keyAnswer":null}"#, history: history)
+        }
         if TidyTabsService.fakeModel {
             let draft = AskOnPage.fixtureDraft(question: fitted.question, source: fitted.source, echoed: fakeEchoes)
             fakeEchoes = AskOnPagePrompt.echoesPrompt(draft.answer ?? "") ? fakeEchoes + 1 : 0

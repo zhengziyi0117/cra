@@ -5,10 +5,7 @@ import Observation
 import FoundationModels
 #endif
 
-/// Tidy Tabs on the Mac's own Apple Intelligence model (FoundationModels, macOS 26): free, and
-/// nothing leaves the Mac. Arc sent the same "id: title" list to its server (Arc Max). Without
-/// Apple Intelligence (an older macOS, a Mac that can't run it, or it is off) the Tidy button
-/// doesn't show at all. What the answer does to the sidebar is TidyTabs (CraCore) and the store.
+/// Groups Today tabs with the selected Max provider. CraCore validates the proposed assignments before the store applies them.
 @MainActor @Observable
 final class TidyTabsService {
     static let shared: TidyTabsService = {
@@ -24,17 +21,9 @@ final class TidyTabsService {
 
     /// Read again when Cra comes to the front and while Settings shows it, so turning Apple
     /// Intelligence on in System Settings shows the button without a relaunch.
-    private(set) var status: Status = .needsNewerMacOS {
-        didSet {
-            if status != .available {
-                NotificationCenter.default.post(name: AskOnPage.unavailableNotification, object: self)
-            }
-        }
-    }
-    var modelAvailable: Bool { status == .available }
-    /// Re-read where it matters (a download's rename, an Ask request and its answer), even before the
-    /// cached status refreshes.
-    var currentModelAvailable: Bool { Self.currentStatus() == .available }
+    private(set) var status: Status = .needsNewerMacOS
+    var modelAvailable: Bool { ChatGPTMax.shared.selected ? ChatGPTMax.shared.available : status == .available }
+    var currentModelAvailable: Bool { ChatGPTMax.shared.selected ? ChatGPTMax.shared.available : Self.currentStatus() == .available }
     @ObservationIgnored var downloadsUnavailable: () -> Void = {}
     @ObservationIgnored var previewsUnavailable: () -> Void = {}
     @ObservationIgnored var titlesUnavailable: () -> Void = {}
@@ -74,15 +63,20 @@ final class TidyTabsService {
         }
     }
 
-    func refresh() {
-        let now = Self.currentStatus()
-        // Invalidate synchronously even if the unavailable status was already cached.
-        if now != .available { cancelAll(); downloadsUnavailable(); previewsUnavailable(); titlesUnavailable() }
-        if now != status { status = now }
-        else if now != .available {
-            // A repeated unavailable refresh must invalidate work even when the UI cache did not change.
-            NotificationCenter.default.post(name: AskOnPage.unavailableNotification, object: self)
+    func refresh(providerChanged: Bool = false) {
+        if !ChatGPTMax.shared.selected {
+            let current = Self.currentStatus()
+            if current != status { status = current }
         }
+        if providerChanged || !modelAvailable { invalidateModel() }
+    }
+
+    private func invalidateModel() {
+        cancelAll()
+        downloadsUnavailable()
+        previewsUnavailable()
+        titlesUnavailable()
+        NotificationCenter.default.post(name: AskOnPage.unavailableNotification, object: self)
     }
 
     func cancelAll(store: SidebarStore? = nil) {

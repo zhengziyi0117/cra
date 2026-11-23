@@ -1,11 +1,6 @@
 import AppKit
 import SwiftUI
 
-/// Arc's Max pane (Arc 1.171, Settings ▸ Max): one card, a row per feature with a picture in a
-/// white frame, its name, what it does and a switch, and a line under the card about where the
-/// data goes. Cra's features run on the Mac's own Apple Intelligence model, so that line says
-/// the model sends nothing (and, with Instant Links on, that its searches go to the search engine),
-/// or, while Apple Intelligence can't run, why and how to turn it on.
 struct MaxPane: View {
     @Environment(SidebarStore.self) private var store
     private var service: TidyTabsService { TidyTabsService.shared }
@@ -14,14 +9,14 @@ struct MaxPane: View {
 
     var body: some View {
         @Bindable var store = store
-        let available = service.status == .available
+        let cloud = ChatGPTMax.shared
+        let available = service.modelAvailable
         let features = [store.settings.tidyTabs, store.settings.tidyTabTitles, store.settings.tidyDownloads, store.settings.fiveSecondPreviews, store.settings.askOnPage, store.settings.instantLinks]
         ScrollView(.vertical) {
             VStack(alignment: .leading, spacing: 0) {
                 MaxBanner()
                 VStack(alignment: .leading, spacing: 0) {
-                    SettingsBlurb("Let Cra do more for you with Max, so you can do less. Power up your browsing with Apple Intelligence on this Mac and spend time on the things that matter — on or off screen.")
-                        .padding(.top, 20)
+                    MaxProviderSettings()
                     // Arc's "Enable Max" with its button: Turn On All / Turn On Max / Turn Off Max, by how many are on.
                     SettingsCard {
                         SettingsCardRow {
@@ -86,7 +81,7 @@ struct MaxPane: View {
                 }
                     }
                     .padding(.top, 9)
-            MaxFooter(status: service.status, instantLinks: store.settings.instantLinks) { service.openSystemSettings() }
+            MaxFooter(status: cloud.selected ? nil : service.status, instantLinks: store.settings.instantLinks) { service.openSystemSettings() }
                 .padding(.top, 14)
                 }
                 .padding(.horizontal, SettingsMetrics.paneInset)
@@ -105,27 +100,75 @@ struct MaxPane: View {
     }
 }
 
+private struct MaxProviderSettings: View {
+    private var cloud: ChatGPTMax { .shared }
+
+    var body: some View {
+        SettingsBlurb("Apple Intelligence runs on this Mac. If you choose ChatGPT, enabled Max features send the page text, questions, search terms, tab titles, site names or download filenames they need to OpenAI and use your ChatGPT plan.")
+            .padding(.top, 20)
+        SettingsCard {
+            SettingsCardRow {
+                Text("AI provider")
+            } trailing: {
+                Picker("AI provider", selection: Binding(get: { cloud.selected }, set: cloud.select)) {
+                    Text("Apple Intelligence").tag(false)
+                    Text("ChatGPT").tag(true)
+                }.labelsHidden().fixedSize()
+            }
+            if cloud.selected {
+                SettingsCardDivider()
+                SettingsCardRow {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(cloud.account ?? (cloud.connected ? "Signed in to ChatGPT" : "ChatGPT account"))
+                        if let model = cloud.model { Text(model).font(.caption).foregroundStyle(.secondary) }
+                        Link("Manage usage", destination: URL(string: "https://chatgpt.com/settings/usage")!)
+                    }
+                } trailing: {
+                    if let pending = cloud.pending {
+                        ProgressView().controlSize(.small)
+                        if pending == .connect { Button("Cancel") { cloud.cancelConnection() } }
+                    } else {
+                        if cloud.connected && !cloud.available {
+                            Button("Retry") { cloud.refresh() }
+                        }
+                        if !cloud.available {
+                            Button("Sign in with ChatGPT") { cloud.changeConnection(.connect) }
+                        }
+                        if cloud.connected {
+                            Button("Disconnect") { cloud.changeConnection(.disconnect) }
+                        }
+                    }
+                }
+            }
+        }
+        if let error = cloud.error {
+            Text(error).font(.callout).foregroundStyle(.secondary).textSelection(.enabled)
+        }
+    }
+}
+
 /// Under the card, where Arc says Max sends data to its AI partners: what runs where, or why it
 /// can't and the way to System Settings ▸ Apple Intelligence & Siri.
 private struct MaxFooter: View {
-    let status: TidyTabsService.Status
+    let status: TidyTabsService.Status?
     let instantLinks: Bool
     let openSettings: () -> Void
 
     var body: some View {
         VStack(spacing: 3) {
-            Text(status.explanation)
-                .font(.system(size: 12)).foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
-            // The searches Instant Links makes are the one thing that leaves the Mac.
-            if status == .available, instantLinks {
+            if let status {
+                Text(status.explanation)
+                    .font(.system(size: 12)).foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            if (status == nil || status == .available), instantLinks {
                 Text("Instant Links sends what it searches for to your search engine, as a search would.")
                     .font(.system(size: 12)).foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
             }
-            if status.canOpenSettings {
+            if status?.canOpenSettings == true {
                 Button(action: openSettings) {
                     Text("Turn on Apple Intelligence in System Settings").font(.system(size: 12)).underline()
                 }

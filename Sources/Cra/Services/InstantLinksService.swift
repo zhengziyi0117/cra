@@ -6,10 +6,7 @@ import Observation
 import FoundationModels
 #endif
 
-/// Arc Max's Instant Links (#407) on the Mac's own Apple Intelligence model: Shift-Return on a
-/// search in ⌘T turns the typed phrase into a plan (CraCore InstantLinks), searches Google in a
-/// page nobody sees and opens the top results as tabs, a split or a folder. The sidebar shows a row
-/// at the top of Today meanwhile. Only the queries leave the Mac, to the search engine.
+/// Shift-Return turns a phrase into a plan using the selected Max provider and opens results from the user's search engine.
 @MainActor @Observable
 final class InstantLinksService {
     static let shared = InstantLinksService()
@@ -49,9 +46,9 @@ final class InstantLinksService {
     /// its error. Changed by the same `cra://debug` key.
     static var failsOnPurpose = ProcessInfo.processInfo.environment["CRA_INSTANT_LINKS_FAIL"] == "1"
 
-    /// Settings ▸ Max ▸ Instant Links is on, and Apple Intelligence can answer.
-    func isAvailable(_ store: SidebarStore) -> Bool {
-        store.settings.instantLinks && (TidyTabsService.fakeModel || TidyTabsService.shared.modelAvailable)
+    /// Settings ▸ Max ▸ Instant Links is on, and the selected model can answer.
+    func isAvailable(_ store: SidebarStore, space: UUID? = nil) -> Bool {
+        !(ChatGPTMax.shared.selected && store.isIncognito(space: space)) && store.settings.instantLinks && (TidyTabsService.fakeModel || TidyTabsService.shared.modelAvailable)
     }
 
     // MARK: Run
@@ -69,7 +66,7 @@ final class InstantLinksService {
     /// The model's first answer after launch took 7.7 s, a warm one 2.1: the bar opening loads it. The
     /// session is kept until the next run uses it.
     func prewarm(_ store: SidebarStore) {
-        guard isAvailable(store), !TidyTabsService.fakeModel else { return }
+        guard !ChatGPTMax.shared.selected, isAvailable(store), !TidyTabsService.fakeModel else { return }
         #if canImport(FoundationModels)
         if #available(macOS 26.0, *), warmSession == nil {
             let session = LanguageModelSession(instructions: InstantLinks.instructions)
@@ -84,6 +81,7 @@ final class InstantLinksService {
     /// Shift-Return on `phrase`: the row appears, the plan is made, the searches run, the results open
     /// in `space` and the row goes. `engine` is the one the bar searched with.
     func run(phrase: String, space: UUID, engine: ChromiumSearchEngine, store: SidebarStore, host: Host, asNewTab: Bool = false) {
+        guard isAvailable(store, space: space) else { return }
         // Only the newest row is drawn as the open one.
         for i in pending.indices { pending[i].current = false }
         let row = Pending(id: UUID(), space: space, current: asNewTab)
@@ -106,6 +104,11 @@ final class InstantLinksService {
             CraLog.note("Instant Links: gave up after 75 s")
             self.fail(row.id)
         }
+    }
+
+    func cancelAll() {
+        for row in pending { dismiss(row.id) }
+        warmSession = nil
     }
 
     /// The error row's ✕.
@@ -188,6 +191,15 @@ final class InstantLinksService {
             try? await Task.sleep(for: .seconds(1.6))
             if Self.modelFailsOnPurpose { return fallbackPlan(for: phrase, failure: "test") }
             return InstantLinks.plainPlan(for: phrase)
+        }
+        if ChatGPTMax.shared.selected {
+            do {
+                let plan: InstantLinks.Plan = try await ChatGPTMax.shared.answer(InstantLinks.instructions, prompt: phrase,
+                    shape: #"{"title":"title","format":"tab|folder|split","searches":[{"query":"query","count":1}]}"#)
+                return InstantLinks.plan(title: plan.title, format: plan.format, searches: plan.searches, phrase: phrase)
+            } catch {
+                return Task.isCancelled ? nil : fallbackPlan(for: phrase, failure: "ChatGPT")
+            }
         }
         #if canImport(FoundationModels)
         if #available(macOS 26.0, *) {

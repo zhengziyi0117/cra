@@ -4,10 +4,7 @@ import Foundation
 import FoundationModels
 #endif
 
-/// 5-Second Previews on the Mac's own Apple Intelligence model (FoundationModels, macOS 26): the
-/// page behind a link, fetched only once its card is asked for, summarized into Arc's answer card.
-/// Chromium fetches the page in the tab's own profile, as a click would load it. The text and the
-/// answer stay on the Mac.
+/// 5-Second Previews fetches the linked page in its tab’s profile and summarizes it with the selected Max provider.
 @MainActor
 final class LinkSummaryService {
     static let shared = LinkSummaryService()
@@ -39,6 +36,13 @@ final class LinkSummaryService {
         self.fetchPage = fetch ?? { request in await transport.load(request) }
         if let image { self.fetchImage = { url, _ in await image(url) } } else { self.fetchImage = Self.image }
         self.summarize = answer ?? { await Self.ask(url: $0, content: $1, searchQuery: $2, language: $3, partial: $4) }
+    }
+
+    func clearCache() {
+        cards = LinkSummaryCache()
+        images.removeAll()
+        imageOrder.removeAll()
+        titles.removeAll()
     }
 
     var isAvailable: Bool { TidyTabsService.fakeModel || TidyTabsService.shared.currentModelAvailable }
@@ -253,6 +257,10 @@ final class LinkSummaryService {
             try await Task.sleep(for: .seconds(0.6))
             try Task.checkCancellation()
             return answer
+        }
+        if ChatGPTMax.shared.selected {
+            return try await ChatGPTMax.shared.answer(LinkSummaryPrompt.instructions, prompt: input.promptWithHostOnly,
+                shape: #"{"blocked":false,"userQuestion":null,"quickSummary":"short summary","details":[{"label":"label","icon":"SF Symbol name","info":"key point"}]} (2–4 details)"#)
         }
         #if canImport(FoundationModels)
         if #available(macOS 26.0, *) { return try await LinkSummaryModel.respond(input, partial: partial) }

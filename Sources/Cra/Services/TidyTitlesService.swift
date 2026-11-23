@@ -2,7 +2,7 @@ import AppKit
 import Foundation
 import Observation
 
-/// Tidy Tab Titles on the Mac's Apple Intelligence model: a tab you pin gets a short name (Arc Max's
+/// Tidy Tab Titles: a tab you pin gets a short name (Arc Max's
 /// renamePinnedTabs). The name becomes the tab's custom title, as in Arc, and the row plays Arc's
 /// rename (TabRowView.playTidyRename): the old title sweeps into the new one with sparkles, and
 /// "Double-click to rename" shows under it for a few seconds.

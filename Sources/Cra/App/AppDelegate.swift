@@ -74,6 +74,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         LinkSummaryPreviewController.shared.bindEligibility(to: store)
         store.tidyTabTitlesChanged = { enabled in if !enabled { TidyTitlesService.shared.cancelAll() } }
         TidyTabsService.shared.titlesUnavailable = { TidyTitlesService.shared.cancelAll() }
+        ChatGPTMax.shared.configure(directory: AppPaths.supportDir.appendingPathComponent("Max")) {
+            TidyTabsService.shared.refresh(providerChanged: true)
+            InstantLinksService.shared.cancelAll()
+            LinkSummaryService.shared.clearCache()
+        }
         // A tip takes the tones of the space its browser window is in (the sidebar may be a
         // floating panel, a child of that window).
         ArcTooltipController.shared.tones = { [unowned self] window in

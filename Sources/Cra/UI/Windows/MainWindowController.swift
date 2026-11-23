@@ -1471,7 +1471,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, BrowserM
             CraLog.note("Download finished from a \(URL(string: download.url)?.scheme ?? "unknown"): address")
             let id = download.identifier
             TidyDownloadsService.shared.finished(id, path: download.fullPath, downloadURL: download.url, window: windowID, store: store,
-                ownerEligible: { [weak self] in self?.window != nil && self?.isPutAway == false }) { [weak self] path in
+                ownerEligible: { [weak self] in self?.window != nil && self?.isPutAway == false && !(ChatGPTMax.shared.selected && self?.isIncognito == true) }) { [weak self] path in
                 guard let self, var recent = self.sidebarUI.recentDownload, recent.id == id, recent.path == download.fullPath else { return }
                 recent.path = path
                 self.sidebarUI.recentDownload = recent
@@ -1765,8 +1765,11 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, BrowserM
         // slid out at the edge: that one is the sidebar, whose rows stay in reach of a Peek (#242, #295).
         // The command bar ⌘T opened from a Peek stays above the Peek (#379).
         let bar: [NSWindow] = commandBar.isOpen && commandPanel.parent === window ? [commandPanel] : []
-        let wanted = panels.compactMap { $0 } + peeks.flatMap(\.peekWindows) + (floatingSidebar?.attachedPanels ?? [])
-            + AgentCursor.panels(over: window) + AgentPill.panels(over: window) + ChromiumDialogs.dialogs(over: window) + PermissionPopover.panels(over: window) + bar
+        var wanted: [NSWindow] = panels.compactMap { $0 }
+        wanted += peeks.flatMap(\.peekWindows)
+        wanted += floatingSidebar?.attachedPanels ?? []
+        wanted += AgentCursor.panels(over: window) + AgentPill.panels(over: window)
+        wanted += ChromiumDialogs.dialogs(over: window) + PermissionPopover.panels(over: window) + bar
         // Already the last children, in order, and showing: re-adding each one rebuilt the
         // window's ordering group, a window server round trip, on every tab switch.
         let children = window.childWindows ?? []

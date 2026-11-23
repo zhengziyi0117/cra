@@ -83,6 +83,7 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$APP/Contents/Framewor
 
 cp "$BIN/Cra" "$APP/Contents/MacOS/$EXE"
 cp "$BIN/CraPluginHost" "$APP/Contents/MacOS/CraPluginHost"
+scripts/package-chatgpt.sh "$APP" "$ARCH"
 sed -e "s/__VERSION__/$VERSION/" -e "s/__BUILD__/$BUILD_NUMBER/" resources/Info.plist > "$APP/Contents/Info.plist"
 # CRA_BUNDLE_ID builds under another identifier: a test build signed with one's own team and
 # a provisioning profile for it (docs/release.md, "iCloud sync"). The data folder stays Cra's,
@@ -221,6 +222,7 @@ sign "$SPARKLE/Versions/B/Autoupdate"
 sign "$SPARKLE/Versions/B/Updater.app"
 sign "$SPARKLE"
 sign "$APP/Contents/MacOS/CraPluginHost"
+sign "$APP/Contents/MacOS/CraMaxNode" "$ROOT/resources/CraMaxNode.entitlements"
 for h in "$APP"/Contents/Frameworks/*.app; do if [ -e "$h" ]; then sign "$h" "$ROOT/resources/CraHelper.entitlements"; fi; done
 sign "$DOCK_TILE"
 # Passkeys need entitlements only a provisioning profile can grant: the Touch ID

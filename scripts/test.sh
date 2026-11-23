@@ -24,6 +24,7 @@ if [ "${1:-}" != core ]; then
   suite "Browser manager" Tests/test-browser-manager.sh
   suite "Ask on Page DOM" scripts/test-ask-on-page-content.sh
   suite "Ask on Page quote scripts" scripts/test-ask-on-page-quotes.sh
+  suite "ChatGPT Max" scripts/test-chatgpt-max.sh
   suite "Ask on Page service" scripts/test-ask-on-page-service.sh
   suite "Ask on Page lifecycle" scripts/test-ask-on-page-lifecycle.sh
   suite "iOS popup ownership" scripts/test-mobile-popup.sh

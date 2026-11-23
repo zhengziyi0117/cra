@@ -3,7 +3,7 @@ import Foundation
 
 /// A card's content.
 public struct LinkSummaryResult: Equatable, Sendable {
-    public struct Detail: Equatable, Sendable {
+    public struct Detail: Equatable, Sendable, Decodable {
         /// Arc's examples: "Price", "Story", "Solution 1", "Highlights", "Criticism".
         public var label: String
         /// An SF Symbol name the model chose; the card falls back when the system has no such symbol.

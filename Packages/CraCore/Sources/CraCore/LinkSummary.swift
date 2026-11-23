@@ -347,6 +347,9 @@ public enum LinkSummaryPrompt {
         public let content: LinkSummaryContent.Extracted
         public let searchQuery: String?
         public let language: String
+        public var promptWithHostOnly: String {
+            LinkSummaryPrompt.render(url: URL(string: url)?.host ?? "", content: content, searchQuery: searchQuery, language: language)
+        }
         public var prompt: String { LinkSummaryPrompt.render(url: url, content: content, searchQuery: searchQuery, language: language) }
     }
 
@@ -423,7 +426,7 @@ public enum LinkSummaryPrompt {
     }
 
     /// The model's fields before cleaning.
-    public struct Answer: Equatable, Sendable {
+    public struct Answer: Equatable, Sendable, Decodable {
         public var blocked: Bool
         /// A generated search focus, not displayed or substituted for the quick summary.
         public var userQuestion: String?
