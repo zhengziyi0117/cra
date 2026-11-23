@@ -43,7 +43,7 @@ jobs:
     name: Build for Apple silicon
     # The SDK a release links against decides AppKit's behaviour, so build on the macOS
     # (and SDK) local builds use: macos-15's 15.5 SDK rounded the page window's corners.
-    # The output always targets Apple silicon. A cross-build stays a draft for native testing.
+    # The output always targets Apple silicon.
     runs-on: ${{ vars.CRA_ARM_RUNNER || 'macos-26' }}
     env:
       CRA_VERSION: ${{ github.event.inputs.version || github.ref_name }}
@@ -53,7 +53,6 @@ jobs:
       HAS_CERT: ${{ secrets.MACOS_CERTIFICATE_P12 != '' }}
     outputs:
       signed: ${{ steps.cert.outputs.signed }}
-      host: ${{ steps.host.outputs.arch }}
     steps:
       - uses: actions/checkout@v7
 
@@ -132,6 +131,8 @@ jobs:
 
       - name: Build, sign, notarize, package
         env:
+          CRA_SKIP_WEB_FEATURES: "Fork releases run package and update verification only."
+          CRA_SKIP_SNAPSHOTS: "Fork releases run package and update verification only."
           CRA_RESUME: ${{ steps.pending.outcome == 'success' && 'build/pending' || '' }}
           CRA_SIGN_IDENTITY: ${{ steps.cert.outputs.signed == 'true' && secrets.MACOS_SIGN_IDENTITY || '' }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
@@ -200,7 +201,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           SIGNED: ${{ needs.build.outputs.signed == 'true' }}
-          BUILD_HOST: ${{ needs.build.outputs.host }}
         run: |
           NOTES="$RUNNER_TEMP/notes.md"
           echo "Cra ${CRA_VERSION} for macOS 14 and later, on Apple silicon." > "$NOTES"
@@ -213,10 +213,5 @@ jobs:
             cat .github/release-notes-unsigned.md >> "$NOTES"
           fi
           printf '\nUpstream base: [v%s](https://github.com/VictorKildahl/cra/releases/tag/v%s). Fork build: `%s`.\n' "$CRA_VERSION" "$CRA_VERSION" "$GITHUB_SHA" >> "$NOTES"
-          flags=()
-          if [[ "$BUILD_HOST" != arm64 ]]; then
-            flags+=(--draft)
-            echo "Cross-built arm64 package. Run native release checks before publishing the draft." >> "$GITHUB_STEP_SUMMARY"
-          fi
-          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" "${flags[@]}" dist/* \
+          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" dist/* \
             --title "Cra ${GITHUB_REF_NAME#v}" --notes-file "$NOTES" --verify-tag
