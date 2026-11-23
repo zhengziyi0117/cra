@@ -110,24 +110,3 @@ jobs:
           name: scenario-logs
           path: build/scenarios
           if-no-files-found: ignore
-
-  build-intel:
-    name: Build Cra.app (Intel)
-    # Every release ships an Intel copy too (scripts/release.sh), cross-compiled on this runner.
-    runs-on: macos-26
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: Cache the engine
-        uses: actions/cache@v6
-        with:
-          path: vendor/engine-x86_64
-          key: engine-x86_64-${{ hashFiles('scripts/fetch-engine.sh') }}
-
-      - name: Build (debug, ad-hoc signed)
-        run: CRA_ARCH=x86_64 scripts/build.sh debug
-
-      - name: Verify bundle
-        run: |
-          codesign --verify --deep --strict --verbose=2 build/x86_64/Cra.app
-          lipo -archs build/x86_64/Cra.app/Contents/MacOS/Cra
