@@ -13,9 +13,8 @@ fail() { printf '\033[31m%s\033[0m\n' "$*" >&2; exit 1; }
 main() {
   [ "$(uname -s)" = Darwin ] || fail "Cra runs on macOS only."
   # hw.optional.arm64 is 1 on Apple silicon even when this shell runs under Rosetta.
-  local asset=Cra-Intel.zip
-  [ "$(sysctl -n hw.optional.arm64 2>/dev/null)" = 1 ] && asset=Cra.zip
-  local url="${CRA_DOWNLOAD_URL:-https://github.com/zhengziyi0117/cra/releases/latest/download/$asset}"
+  [ "$(sysctl -n hw.optional.arm64 2>/dev/null)" = 1 ] || fail "This fork requires an Apple silicon Mac."
+  local url="${CRA_DOWNLOAD_URL:-https://github.com/zhengziyi0117/cra/releases/latest/download/Cra.zip}"
   local dir="${CRA_INSTALL_DIR:-}"
 
   [ "$(sw_vers -productVersion | cut -d. -f1)" -ge 14 ] || fail "Cra needs macOS 14 Sonoma or later."

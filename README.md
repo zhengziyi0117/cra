@@ -11,7 +11,6 @@
 
 <p align="center">
   <a href="https://github.com/zhengziyi0117/cra/releases/latest/download/Cra.dmg"><b>Download for macOS</b></a> ·
-  <a href="https://github.com/zhengziyi0117/cra/releases/latest/download/Cra-Intel.dmg">Intel Mac</a> ·
   <a href="https://crabrowser.app/iphone">iPhone beta</a> ·
   <a href="https://crabrowser.app">crabrowser.app</a> ·
   <a href="https://github.com/zhengziyi0117/cra/releases">What's new</a> ·
@@ -20,7 +19,7 @@
 
 <p align="center">
   <a href="https://github.com/zhengziyi0117/cra/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/zhengziyi0117/cra?label=release"></a>
-  <img alt="macOS 14+, Apple silicon and Intel" src="https://img.shields.io/badge/macOS-14%2B%20·%20Apple%20silicon%20%26%20Intel-lightgrey">
+  <img alt="macOS 14+, Apple silicon" src="https://img.shields.io/badge/macOS-14%2B%20·%20Apple%20silicon-lightgrey">
   <a href="LICENSE"><img alt="MIT licence" src="https://img.shields.io/github/license/VictorKildahl/cra"></a>
 </p>
 
@@ -44,12 +43,11 @@ layer built in, so sites and Chrome extensions work as they do in Chrome.
 
 <p align="center">
   Open the DMG and drag Cra to Applications.<br>
-  This personal macOS build receives Sparkle updates from this fork. See the release for first-install instructions.<br>
-  On an Intel Mac, download <a href="https://github.com/zhengziyi0117/cra/releases/latest/download/Cra-Intel.dmg">Cra-Intel.dmg</a> instead.
+  This personal macOS build receives Sparkle updates from this fork. See the release for first-install instructions.
 </p>
 
 <p align="center">
-  Install this fork from Terminal on either kind of Mac:<br>
+  Install this fork from Terminal on an Apple silicon Mac:<br>
   <code>curl -fsSL https://raw.githubusercontent.com/zhengziyi0117/cra/fork-release/scripts/install.sh | bash</code>
 </p>
 

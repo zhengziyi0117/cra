@@ -1,6 +1,6 @@
 name: Release
 
-# Cut a release by pushing a tag: git tag v0.1.0 && git push origin v0.1.0
+# To cut a release, run Sync upstream release on fork-release
 # Signing and notarization run when the secrets below exist; otherwise the
 # job publishes an ad-hoc build with install steps from release-notes-unsigned.md.
 #
@@ -14,7 +14,7 @@ name: Release
 #   APPLE_API_KEY_P8             optional, preferred: an App Store Connect API key (.p8 text) with the
 #   APPLE_API_KEY_ID             Developer role, its key id and the issuer id. notarize.sh uses it in
 #   APPLE_API_ISSUER             place of the Apple ID, which breaks with a revoked app password.
-#   SPARKLE_PRIVATE_KEY          EdDSA key that signs updates (generate_keys --account cra -x),
+#   SPARKLE_PRIVATE_KEY          EdDSA key that signs updates (generate_keys --account cra-zhengziyi0117-fork -x),
 #                                required: installed copies only accept updates it signed
 #   MACOS_PROVISIONING_PROFILE   optional, base64 of the Developer ID provisioning profile
 #                                for dk.kildahl.cra: turns on passkeys (docs/release.md)
@@ -40,20 +40,13 @@ permissions:
 
 jobs:
   build:
-    name: Build, sign, notarize (${{ matrix.arch }})
+    name: Build for Apple silicon
     # The SDK a release links against decides AppKit's behaviour, so build on the macOS
     # (and SDK) local builds use: macos-15's 15.5 SDK rounded the page window's corners.
-    # Intel is cross-compiled on the same Apple silicon runner, with the same SDK.
     runs-on: macos-26
-    strategy:
-      # One CPU stopping (Apple's notary queue running past the wait) doesn't cancel the other's
-      # notarization: each job's rerun resumes on its own.
-      fail-fast: false
-      matrix:
-        arch: [arm64, x86_64]
     env:
       CRA_VERSION: ${{ github.event.inputs.version || github.ref_name }}
-      CRA_ARCHS: ${{ matrix.arch }}
+      CRA_ARCHS: arm64
       CRA_RELEASE_TAG: ${{ github.ref_name }}
       # The secrets context is not allowed in step `if`s, so resolve it once here.
       HAS_CERT: ${{ secrets.MACOS_CERTIFICATE_P12 != '' }}
@@ -67,14 +60,13 @@ jobs:
           version=${CRA_VERSION#v}
           echo "CRA_VERSION=${version%-fork.*}" >> "$GITHUB_ENV"
 
-      # build.sh keeps the runner's own CPU in vendor/engine and the other one in vendor/engine-<arch>.
       - name: Cache the engine
         uses: actions/cache@v6
         with:
-          path: ${{ matrix.arch == 'arm64' && 'vendor/engine' || format('vendor/engine-{0}', matrix.arch) }}
-          key: engine-${{ matrix.arch }}-${{ hashFiles('scripts/fetch-engine.sh') }}
+          path: vendor/engine
+          key: engine-arm64-${{ hashFiles('scripts/fetch-engine.sh') }}
 
-      - name: Set the shared Sparkle build number
+      - name: Set the Sparkle build number
         run: echo "CRA_BUILD=$(date -u -r "$(git show -s --format=%ct HEAD)" +%Y%m%d%H%M%S)" >> "$GITHUB_ENV"
 
       - name: Import signing certificate
@@ -127,7 +119,7 @@ jobs:
         continue-on-error: true
         uses: actions/download-artifact@v8
         with:
-          name: pending-${{ env.CRA_VERSION }}-${{ matrix.arch }}
+          name: pending-${{ env.CRA_VERSION }}-arm64
           path: build/pending
 
       - name: Build, sign, notarize, package
@@ -152,7 +144,7 @@ jobs:
         if: ${{ failure() || cancelled() }}
         uses: actions/upload-artifact@v7
         with:
-          name: pending-${{ env.CRA_VERSION }}-${{ matrix.arch }}
+          name: pending-${{ env.CRA_VERSION }}-arm64
           path: build/keep
           if-no-files-found: ignore
           overwrite: true
@@ -160,7 +152,7 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: Cra-${{ env.CRA_VERSION }}-${{ matrix.arch }}
+          name: Cra-${{ env.CRA_VERSION }}-arm64
           path: build/dist/*
 
   publish:
@@ -177,32 +169,23 @@ jobs:
           version=${CRA_VERSION#v}
           echo "CRA_VERSION=${version%-fork.*}" >> "$GITHUB_ENV"
 
-      # Both jobs' files in one folder; each wrote a SHA256SUMS.txt for its own CPU.
       - name: Collect artifacts
         uses: actions/download-artifact@v8
         with:
-          pattern: Cra-*
+          name: Cra-${{ env.CRA_VERSION }}-arm64
           path: dist
-          merge-multiple: true
 
-      - name: Checksums for both CPUs
+      - name: Verify release checksums
         run: |
           cd dist
-          for f in Cra.dmg Cra.zip appcast.xml appcast-stable.xml Cra-Intel.dmg Cra-Intel.zip appcast-intel.xml appcast-stable-intel.xml; do
+          for f in Cra.dmg Cra.zip appcast.xml appcast-stable.xml; do
             [ -f "$f" ] || { echo "Missing $f" >&2; exit 1; }
           done
-          sha256sum Cra*.zip Cra*.dmg > SHA256SUMS.txt
-          cat SHA256SUMS.txt
+          sha256sum --check SHA256SUMS.txt
 
       - name: Verify fork update archives and both channels
         if: startsWith(github.ref, 'refs/tags/')
         run: python3 scripts/verify-fork-release.py dist "$GITHUB_REPOSITORY" "$GITHUB_REF_NAME"
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v7
-        with:
-          name: Cra-${{ env.CRA_VERSION }}
-          path: dist/*
 
       - name: Publish GitHub release
         if: ${{ startsWith(github.ref, 'refs/tags/') }}
@@ -211,12 +194,12 @@ jobs:
           SIGNED: ${{ needs.build.outputs.signed == 'true' }}
         run: |
           NOTES="$RUNNER_TEMP/notes.md"
-          echo "Cra ${CRA_VERSION} for macOS 14 and later, on Apple silicon and Intel." > "$NOTES"
+          echo "Cra ${CRA_VERSION} for macOS 14 and later, on Apple silicon." > "$NOTES"
           echo >> "$NOTES"
           # Unsigned builds stay regular releases: releases/latest (the website and
           # scripts/install.sh) skips pre-releases.
           if [ "$SIGNED" = "true" ]; then
-            echo "Download \`Cra.dmg\` (Apple silicon) or \`Cra-Intel.dmg\` (Intel) below, open it and drag Cra to Applications." >> "$NOTES"
+            echo "Download \`Cra.dmg\` below, open it and drag Cra to Applications." >> "$NOTES"
           else
             cat .github/release-notes-unsigned.md >> "$NOTES"
           fi

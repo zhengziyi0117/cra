@@ -2,9 +2,7 @@
 # Full distributable build: build, sign, notarize, package, notarize the DMG, and
 # write the Sparkle appcast for the update archive, once per CPU.
 #   CRA_VERSION=0.1.0 CRA_SIGN_IDENTITY="Developer ID Application: …" scripts/release.sh
-# Every release ships Apple silicon (Cra.dmg, Cra.zip, appcast.xml, appcast-stable.xml) and Intel
-# (Cra-Intel.dmg, Cra-Intel.zip, appcast-intel.xml, appcast-stable-intel.xml). CRA_ARCHS="arm64" (or "x86_64")
-# builds one; the Release workflow runs one per job and merges them.
+# The fork ships Cra.dmg, Cra.zip and both Apple silicon feeds.
 # Without CRA_SIGN_IDENTITY it still produces an ad-hoc build and packages, so
 # the pipeline can be exercised before certificates exist. The appcast needs the
 # update signing key (SPARKLE_PRIVATE_KEY, or the "cra-zhengziyi0117-fork" key in the login keychain).
@@ -16,7 +14,7 @@ export CRA_BUILD="${CRA_BUILD:-$(date +%Y%m%d%H%M)}"
 # Release builds carry the update feed (scripts/build.sh drops it otherwise).
 export CRA_RELEASE=1
 IDENTITY="${CRA_SIGN_IDENTITY:--}"
-ARCHS="${CRA_ARCHS:-arm64 x86_64}"
+ARCHS="${CRA_ARCHS:-arm64}"
 
 # A release ships the newest stable engine: Chromium fixes security bugs only in its newest
 # version. CRA_ALLOW_OLD_ENGINE=1 ships the pinned one anyway (an urgent fix while the new engine

@@ -70,6 +70,12 @@ jobs:
             echo "$fork_tag is already published." >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
+          queued=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow release.yml --branch "$fork_tag" --limit 10 \
+            --json status --jq '[.[] | select(.status != "completed")] | length')
+          if [[ $queued -gt 0 ]]; then
+            echo "$fork_tag already has a release build in progress." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
           # A push with GITHUB_TOKEN does not fire the tag workflow. Dispatch it at the tag.
           gh workflow run release.yml --repo "$GITHUB_REPOSITORY" --ref "$fork_tag" -f version="${tag#v}"
           echo "Queued Release for $fork_tag at $(git rev-parse HEAD)." >> "$GITHUB_STEP_SUMMARY"
