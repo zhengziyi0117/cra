@@ -43,7 +43,8 @@ jobs:
     name: Build for Apple silicon
     # The SDK a release links against decides AppKit's behaviour, so build on the macOS
     # (and SDK) local builds use: macos-15's 15.5 SDK rounded the page window's corners.
-    runs-on: macos-26
+    # A maintainer can select the other standard Apple silicon image during a capacity outage.
+    runs-on: ${{ vars.CRA_ARM_RUNNER || 'macos-26' }}
     env:
       CRA_VERSION: ${{ github.event.inputs.version || github.ref_name }}
       CRA_ARCHS: arm64
@@ -54,6 +55,11 @@ jobs:
       signed: ${{ steps.cert.outputs.signed }}
     steps:
       - uses: actions/checkout@v7
+
+      - name: Check the Apple silicon runner
+        run: |
+          test "$(uname -m)" = arm64
+          xcodebuild -version
 
       - name: Normalise version
         run: |
