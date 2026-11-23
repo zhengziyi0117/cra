@@ -3,7 +3,7 @@
 **Easiest: paste this into Terminal** (Applications → Utilities → Terminal)
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/VictorKildahl/cra/main/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/zhengziyi0117/cra/fork-release/scripts/install.sh | bash
 ```
 
 It puts Cra in your Applications folder and opens it, with no security prompts. From then on Cra keeps itself up to date.

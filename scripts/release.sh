@@ -7,7 +7,7 @@
 # builds one; the Release workflow runs one per job and merges them.
 # Without CRA_SIGN_IDENTITY it still produces an ad-hoc build and packages, so
 # the pipeline can be exercised before certificates exist. The appcast needs the
-# update signing key (SPARKLE_PRIVATE_KEY, or the "cra" key in the login keychain).
+# update signing key (SPARKLE_PRIVATE_KEY, or the "cra-zhengziyi0117-fork" key in the login keychain).
 set -euo pipefail
 cd "$(dirname "$0")/.."
 export CRA_VERSION="${CRA_VERSION:-0.1.0}"
@@ -31,11 +31,9 @@ elif [ "${CRA_ALLOW_OLD_ENGINE:-}" != 1 ]; then
     { echo "Release stopped: the engine is behind Chrome stable (CRA_ALLOW_OLD_ENGINE=1 to ship it anyway)" >&2; exit 1; }
 fi
 
-# The Stable channel's release (GitHub #476, docs/release.md "Channels"): scripts/promote.sh sets it. Its own
-# appcast holds its signed item, which goes into this release's feeds next to the new one.
-export CRA_STABLE_VERSION="${CRA_STABLE_VERSION:-$(tr -d '[:space:]' < scripts/stable-version)}"
-STABLE_DIR="$(mktemp -d /tmp/cra-stable.XXXXXX)"
-trap 'rm -rf "$STABLE_DIR"' EXIT
+# Each published fork release goes to both update channels.
+export CRA_STABLE_VERSION="$CRA_VERSION"
+unset CRA_STABLE_FEED
 
 # CRA_RESUME=<dir> (the Release workflow's rerun, or by hand): a CPU whose signed app, DMG and
 # Apple submission id are in <dir> (scripts/keep-pending.sh wrote them when a run stopped while
@@ -128,14 +126,6 @@ for ARCH in $ARCHS; do
         exit 1
       fi
     fi
-  fi
-  SUFFIX_LOWER="$(echo "$SUFFIX" | tr '[:upper:]' '[:lower:]')"
-  export CRA_STABLE_FEED="$STABLE_DIR/appcast$SUFFIX_LOWER.xml"
-  if [ "$CRA_STABLE_VERSION" != "$CRA_VERSION" ]; then
-    curl -fsSL -o "$CRA_STABLE_FEED" \
-      "https://github.com/VictorKildahl/cra/releases/download/v$CRA_STABLE_VERSION/appcast$SUFFIX_LOWER.xml"
-  else
-    unset CRA_STABLE_FEED  # this release is Stable itself
   fi
   # Installed copies update from the zip; the appcast must sign the final one.
   scripts/appcast.sh "build/dist/Cra$SUFFIX.zip" "$APP" "${CRA_RELEASE_NOTES:-}"

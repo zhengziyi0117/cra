@@ -1,6 +1,6 @@
 #!/bin/bash
 # Installs or updates Cra from the latest GitHub release.
-#   curl -fsSL https://raw.githubusercontent.com/VictorKildahl/cra/main/scripts/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/zhengziyi0117/cra/fork-release/scripts/install.sh | bash
 # Files downloaded with curl carry no quarantine flag, so macOS opens the
 # unnotarized build without the Gatekeeper prompt a browser download triggers.
 # Overrides: CRA_DOWNLOAD_URL (zip to install), CRA_INSTALL_DIR, CRA_NO_OPEN=1.
@@ -15,7 +15,7 @@ main() {
   # hw.optional.arm64 is 1 on Apple silicon even when this shell runs under Rosetta.
   local asset=Cra-Intel.zip
   [ "$(sysctl -n hw.optional.arm64 2>/dev/null)" = 1 ] && asset=Cra.zip
-  local url="${CRA_DOWNLOAD_URL:-https://github.com/VictorKildahl/cra/releases/latest/download/$asset}"
+  local url="${CRA_DOWNLOAD_URL:-https://github.com/zhengziyi0117/cra/releases/latest/download/$asset}"
   local dir="${CRA_INSTALL_DIR:-}"
 
   [ "$(sw_vers -productVersion | cut -d. -f1)" -ge 14 ] || fail "Cra needs macOS 14 Sonoma or later."

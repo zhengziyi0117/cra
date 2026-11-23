@@ -19,7 +19,7 @@ HEADER = """<?xml version="1.0" encoding="utf-8"?>
 <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
   <channel>
     <title>Cra</title>
-    <link>https://crabrowser.app/release-notes</link>
+    <link>https://github.com/zhengziyi0117/cra/releases</link>
 """
 FOOTER = """  </channel>
 </rss>

@@ -13,7 +13,7 @@ cd "$(dirname "$0")/.."
 VERSION="${1:?usage: scripts/promote.sh <version> [--dry-run]}"
 VERSION="${VERSION#v}"
 DRY="${2:-}"
-REPO=VictorKildahl/cra
+REPO=zhengziyi0117/cra
 
 LATEST="$(gh release view -R "$REPO" --json tagName -q .tagName)"
 NEWEST="${LATEST#v}"

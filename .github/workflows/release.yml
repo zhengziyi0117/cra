@@ -23,13 +23,17 @@ name: Release
 
 on:
   push:
-    tags: ["v*"]
+    tags: ["v*-fork.*"]
   workflow_dispatch:
     inputs:
       version:
         description: Version to build (without the v)
         required: true
         default: 0.1.0
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -50,6 +54,7 @@ jobs:
     env:
       CRA_VERSION: ${{ github.event.inputs.version || github.ref_name }}
       CRA_ARCHS: ${{ matrix.arch }}
+      CRA_RELEASE_TAG: ${{ github.ref_name }}
       # The secrets context is not allowed in step `if`s, so resolve it once here.
       HAS_CERT: ${{ secrets.MACOS_CERTIFICATE_P12 != '' }}
     outputs:
@@ -58,7 +63,9 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Normalise version
-        run: echo "CRA_VERSION=${CRA_VERSION#v}" >> "$GITHUB_ENV"
+        run: |
+          version=${CRA_VERSION#v}
+          echo "CRA_VERSION=${version%-fork.*}" >> "$GITHUB_ENV"
 
       # build.sh keeps the runner's own CPU in vendor/engine and the other one in vendor/engine-<arch>.
       - name: Cache the engine
@@ -66,6 +73,9 @@ jobs:
         with:
           path: ${{ matrix.arch == 'arm64' && 'vendor/engine' || format('vendor/engine-{0}', matrix.arch) }}
           key: engine-${{ matrix.arch }}-${{ hashFiles('scripts/fetch-engine.sh') }}
+
+      - name: Set the shared Sparkle build number
+        run: echo "CRA_BUILD=$(date -u -r "$(git show -s --format=%ct HEAD)" +%Y%m%d%H%M%S)" >> "$GITHUB_ENV"
 
       - name: Import signing certificate
         id: cert
@@ -163,7 +173,9 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Normalise version
-        run: echo "CRA_VERSION=${CRA_VERSION#v}" >> "$GITHUB_ENV"
+        run: |
+          version=${CRA_VERSION#v}
+          echo "CRA_VERSION=${version%-fork.*}" >> "$GITHUB_ENV"
 
       # Both jobs' files in one folder; each wrote a SHA256SUMS.txt for its own CPU.
       - name: Collect artifacts
@@ -181,6 +193,10 @@ jobs:
           done
           sha256sum Cra*.zip Cra*.dmg > SHA256SUMS.txt
           cat SHA256SUMS.txt
+
+      - name: Verify fork update archives and both channels
+        if: startsWith(github.ref, 'refs/tags/')
+        run: python3 scripts/verify-fork-release.py dist "$GITHUB_REPOSITORY" "$GITHUB_REF_NAME"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
@@ -204,5 +220,6 @@ jobs:
           else
             cat .github/release-notes-unsigned.md >> "$NOTES"
           fi
-          gh release create "${{ github.ref_name }}" dist/* \
-            --title "Cra ${CRA_VERSION}" --notes-file "$NOTES" --verify-tag
+          printf '\nUpstream base: [v%s](https://github.com/VictorKildahl/cra/releases/tag/v%s). Fork build: `%s`.\n' "$CRA_VERSION" "$CRA_VERSION" "$GITHUB_SHA" >> "$NOTES"
+          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" dist/* \
+            --title "Cra ${GITHUB_REF_NAME#v}" --notes-file "$NOTES" --verify-tag

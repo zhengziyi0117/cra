@@ -2,7 +2,7 @@
   <img src="brand/cra-segments-icon.svg" alt="Cra logo" width="128" height="128">
 </p>
 
-<h1 align="center">Cra</h1>
+<h1 align="center">Cra · zhengziyi0117 fork</h1>
 
 <p align="center">
   A native macOS browser with a sidebar instead of a tab strip.<br>
@@ -10,16 +10,16 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/VictorKildahl/cra/releases/latest/download/Cra.dmg"><b>Download for macOS</b></a> ·
-  <a href="https://github.com/VictorKildahl/cra/releases/latest/download/Cra-Intel.dmg">Intel Mac</a> ·
+  <a href="https://github.com/zhengziyi0117/cra/releases/latest/download/Cra.dmg"><b>Download for macOS</b></a> ·
+  <a href="https://github.com/zhengziyi0117/cra/releases/latest/download/Cra-Intel.dmg">Intel Mac</a> ·
   <a href="https://crabrowser.app/iphone">iPhone beta</a> ·
   <a href="https://crabrowser.app">crabrowser.app</a> ·
-  <a href="https://crabrowser.app/release-notes">What's new</a> ·
+  <a href="https://github.com/zhengziyi0117/cra/releases">What's new</a> ·
   <a href="https://crabrowser.app/help">Help</a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/VictorKildahl/cra/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/VictorKildahl/cra?label=release"></a>
+  <a href="https://github.com/zhengziyi0117/cra/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/zhengziyi0117/cra?label=release"></a>
   <img alt="macOS 14+, Apple silicon and Intel" src="https://img.shields.io/badge/macOS-14%2B%20·%20Apple%20silicon%20%26%20Intel-lightgrey">
   <a href="LICENSE"><img alt="MIT licence" src="https://img.shields.io/github/license/VictorKildahl/cra"></a>
 </p>
@@ -39,18 +39,18 @@ layer built in, so sites and Chrome extensions work as they do in Chrome.
 ## Install
 
 <p align="center">
-  <a href="https://github.com/VictorKildahl/cra/releases/latest/download/Cra.dmg"><img alt="Download for Mac" src="docs/assets/download.png" width="272" height="60"></a>
+  <a href="https://github.com/zhengziyi0117/cra/releases/latest/download/Cra.dmg"><img alt="Download for Mac" src="docs/assets/download.png" width="272" height="60"></a>
 </p>
 
 <p align="center">
   Open the DMG and drag Cra to Applications.<br>
-  It's signed and notarized by Apple, and keeps itself up to date.<br>
-  On an Intel Mac, download <a href="https://github.com/VictorKildahl/cra/releases/latest/download/Cra-Intel.dmg">Cra-Intel.dmg</a> instead.
+  This personal macOS build receives Sparkle updates from this fork. See the release for first-install instructions.<br>
+  On an Intel Mac, download <a href="https://github.com/zhengziyi0117/cra/releases/latest/download/Cra-Intel.dmg">Cra-Intel.dmg</a> instead.
 </p>
 
 <p align="center">
-  Or with Homebrew, on either kind of Mac:<br>
-  <code>brew install --cask victorkildahl/tap/cra</code>
+  Install this fork from Terminal on either kind of Mac:<br>
+  <code>curl -fsSL https://raw.githubusercontent.com/zhengziyi0117/cra/fork-release/scripts/install.sh | bash</code>
 </p>
 
 ## Coming from Arc
