@@ -641,7 +641,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, BrowserM
             _ = TidyTabsService.shared.modelAvailable
             _ = store.spaces
             _ = SystemAppearance.shared.isDark
-            _ = store.macOSIsDark
+            _ = store.focusedTheme(window: windowID)
             _ = TidyTabsService.shared.modelAvailable
         } onChange: { [weak self] in
             Task { @MainActor in
@@ -4287,7 +4287,9 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, BrowserM
         guard let window, let draft = sidebarUI.spaceCreation, let origin = creationOrigin else { return }
         closeCreationPanels()
         let store = self.store
-        let editor = SpaceStyleEditor(theme: draft.theme) { [weak self] theme in
+        let editor = SpaceStyleEditor(spaceID: origin, editorID: windowID,
+                                      privateTheme: { [weak self] in self?.sidebarUI.spaceCreation?.theme ?? draft.theme },
+                                      onSharedChange: { [weak self] in self?.sidebarUI.spaceCreation?.themeChosen = true }) { [weak self] theme in
             guard let self, self.sidebarUI.spaceCreation != nil else { return }
             self.sidebarUI.spaceCreation?.theme = theme
             self.sidebarUI.spaceCreation?.themeChosen = true
@@ -4315,6 +4317,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, BrowserM
     func cancelSpaceCreation() {
         guard sidebarUI.spaceCreation != nil else { return }
         closeCreationPanels()
+        store.endUniformThemePreview(editor: windowID, keep: false)
         if let origin = creationOrigin { store.endThemePreview(forSpace: origin, keep: false) }
         creationOrigin = nil
         creationDone = nil
@@ -4336,6 +4339,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, BrowserM
     private func finishSpaceCreation() {
         guard let draft = sidebarUI.spaceCreation, let origin = creationOrigin else { return }
         let done = creationDone
+        store.endUniformThemePreview(editor: windowID, keep: true)
         store.endThemePreview(forSpace: origin, keep: false)
         creationOrigin = nil
         creationDone = nil
@@ -4363,9 +4367,13 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, BrowserM
         case "theme":
             if let origin = creationOrigin, sidebarUI.spaceCreation != nil {
                 let theme = SpaceColorPresets.newSpaceTheme(index: Int(parts.count > 1 ? parts[1] : "") ?? 0)
-                sidebarUI.spaceCreation?.theme = theme
                 sidebarUI.spaceCreation?.themeChosen = true
-                store.previewTheme(theme, forSpace: origin)
+                if store.usesUniformTheme(for: origin) {
+                    store.previewUniformTheme(theme, editor: windowID)
+                } else {
+                    sidebarUI.spaceCreation?.theme = theme
+                    store.previewTheme(theme, forSpace: origin)
+                }
             }
         case "profile":
             let n = Int(parts.count > 1 ? parts[1] : "") ?? -1
@@ -5873,11 +5881,13 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, BrowserM
         let profilePath = space.flatMap { store.profilePath(space: $0.id) } ?? store.profilePath(profile: initialProfile)
         let defaultEngine = SearchEngines.shared.defaultEngine(profilePath: profilePath, legacy: store.settings.searchEngine)
         let engines = ChromiumSearchEngine.spaceChoices(among: SearchEngines.shared.keywords(profilePath: profilePath))
-        let view = SpaceEditorView(existing: space, profiles: store.profiles, defaultProfileName: store.profileName(nil), initialProfile: initialProfile, searchEngines: engines,
+        let editorID = UUID()
+        let view = SpaceEditorView(editorID: editorID, existing: space, profiles: store.profiles, defaultProfileName: store.profileName(nil), initialProfile: initialProfile, searchEngines: engines,
                                    defaultEngineName: defaultEngine.name, onSave: { [weak panel] title, icon, theme, profile, newName, searchEngine in
+            store.endUniformThemePreview(editor: editorID, keep: true)
             let id: UUID
             if let sid = space?.id, var s = store.space(sid) {
-                s.rename(to: title); s.icon = icon; s.theme = theme
+                s.rename(to: title); s.icon = icon
                 store.updateSpace(s)
                 id = s.id
             } else {
@@ -5900,6 +5910,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, BrowserM
         window.beginSheet(panel) { [weak self] _ in
             // Closed without Save (Cancel, Escape, cra://dismiss): the stored theme comes back.
             // Save already wrote it, so this does nothing then.
+            store.endUniformThemePreview(editor: editorID, keep: false)
             if let sid = space?.id { store.endThemePreview(forSpace: sid, keep: false) }
             self?.spaceEditor = nil
         }

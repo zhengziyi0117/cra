@@ -188,7 +188,7 @@ public struct UsageStats: Codable, Equatable, Sendable {
         "downloadLocations", "newDocumentApps", "profileAutoArchive", "hasSeenImportPrompt", "toolbarDefaultMigrated", "newTabButtonDefaultMigrated",
         "autoArchiveDays", "shareUsageStats", "askedToShare", "autoHideToolbar", "autoHideLittleWindowToolbar", "autoHidePeekToolbar",
         "commandBarSiteColor", "sidebarSide", "customBlocklists", "edgeToEdgeRoundedCorners", "pageMargin", "translucentSidebar",
-        "uniformSpaceColors", "useCustomSpaceColor", "customSpaceColor",
+        "uniformSpaceColors", "useCustomSpaceColor", "customSpaceColor", "customSpaceTheme",
     ]
 
     public static func changedSettings(_ settings: AppSettings) -> [String: String] {

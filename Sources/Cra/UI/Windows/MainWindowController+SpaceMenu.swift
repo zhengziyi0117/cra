@@ -42,14 +42,17 @@ extension MainWindowController {
     func showSpaceStyleEditor(space: Space, beside anchor: NSView? = nil) {
         guard let window else { return }
         if let open = window.childWindows?.first(where: { $0 is StyleEditorPanel }) { open.close() }
-        let store = self.store, id = space.id
-        let editor = SpaceStyleEditor(theme: space.theme) { theme in store.previewTheme(theme, forSpace: id) }
+        let store = self.store, id = space.id, editorID = UUID()
+        let editor = SpaceStyleEditor(spaceID: id, editorID: editorID, privateTheme: { store.space(id)?.theme ?? space.theme }) {
+            store.previewTheme($0, forSpace: id)
+        }
         // The card sits 12 pt into its 382 × 534 pt window (19 pt above the bottom), room for the shadow.
         let size = NSSize(width: 382, height: 534)
         // From a Spaces page card Arc puts it flush with the card's right edge.
         let x = (anchor.flatMap { v in v.window.map { $0.convertToScreen(v.convert(v.bounds, to: nil)).maxX } }
             ?? window.frame.minX + (shell.sidebarVisible ? shell.sidebarWidth : 0)).rounded()
         let panel = StyleEditorPanel(contentRect: NSRect(x: x, y: window.frame.maxY - size.height, width: size.width, height: size.height)) {
+            store.endUniformThemePreview(editor: editorID, keep: true)
             store.endThemePreview(forSpace: id, keep: true)
         }
         let host = NSHostingView(rootView: editor.environment(store).shadow(color: .black.opacity(0.3), radius: 10, y: 4)

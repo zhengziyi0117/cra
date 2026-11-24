@@ -17,11 +17,11 @@ struct GeneralPane: View {
             SettingsHeader("Space colors")
             SettingsFeatureCard {
                 SettingsToggleRow("Use the same color for all Spaces",
-                                  detail: "Use one palette for every Space, including new and imported Spaces. Turn this off to use each Space’s saved theme.",
+                                  detail: "When on, Edit Theme changes every Space together. Turn this off to edit each Space separately.",
                                   isOn: $store.settings.uniformSpaceColors)
                 if store.settings.uniformSpaceColors {
                     SettingsCardDivider()
-                    SettingsPlainRow("Palette", detail: "Follows your Mac’s light or dark appearance.") {
+                    SettingsPlainRow("Palette", detail: "Arc Default follows your Mac’s light or dark appearance.") {
                         HStack {
                             Picker("Palette", selection: $store.settings.useCustomSpaceColor) {
                                 Text("Arc Default").tag(false)
@@ -31,7 +31,12 @@ struct GeneralPane: View {
                             if store.settings.useCustomSpaceColor {
                                 ColorPicker("Custom space color", selection: Binding(
                                     get: { Color(hex: store.settings.customSpaceColor) },
-                                    set: { store.settings.customSpaceColor = $0.hexString }
+                                    set: { color in
+                                        var updated = store.settings
+                                        updated.customSpaceColor = color.hexString
+                                        updated.customSpaceTheme = nil
+                                        store.settings = updated
+                                    }
                                 ), supportsOpacity: false)
                                 .labelsHidden()
                             }

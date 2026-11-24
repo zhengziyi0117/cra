@@ -766,6 +766,7 @@ public struct AppSettings: Codable, Equatable {
     public var uniformSpaceColors: Bool = true
     public var useCustomSpaceColor: Bool = false
     public var customSpaceColor: String = SpaceColorPresets.brand[8]
+    public var customSpaceTheme: SpaceTheme?
     /// GitHub #464, not in Arc: the sidebar docks on the window's right (SidebarSide). Left is Arc's.
     public var sidebarSide: SidebarSide = .left
     /// GitHub #91, Settings ▸ Performance: Cra records its own performance on this Mac (stalls,
@@ -1091,6 +1092,7 @@ extension AppSettings {
         if let hex = try c.decodeIfPresent(String.self, forKey: .customSpaceColor), HexColor.components(hex) != nil {
             customSpaceColor = hex
         }
+        customSpaceTheme = try? c.decode(SpaceTheme.self, forKey: .customSpaceTheme)
         sidebarSide = (try? c.decodeIfPresent(SidebarSide.self, forKey: .sidebarSide)) ?? .left
         perfRecording = try c.decodeIfPresent(Bool.self, forKey: .perfRecording) ?? Self.perfRecordingDefault
         perfHidesSiteNames = try c.decodeIfPresent(Bool.self, forKey: .perfHidesSiteNames) ?? false

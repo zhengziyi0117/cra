@@ -1,6 +1,30 @@
 import AppKit
 import SwiftUI
 
+struct SpaceStyleEditor: View {
+    @Environment(SidebarStore.self) private var store
+    let spaceID: UUID?
+    let editorID: UUID
+    let privateTheme: () -> SpaceTheme
+    var onSharedChange: () -> Void = {}
+    let onPrivateChange: (SpaceTheme) -> Void
+
+    var body: some View {
+        @Bindable var store = store
+        let shared = store.usesUniformTheme(for: spaceID)
+        ThemePadView(theme: shared ? store.editableUniformTheme : privateTheme(),
+                           uniformColors: store.isStandalone(space: spaceID) ? nil : $store.settings.uniformSpaceColors) { theme in
+            if shared {
+                store.previewUniformTheme(theme, editor: editorID)
+                onSharedChange()
+            } else {
+                onPrivateChange(theme)
+            }
+        }
+        .id(shared)
+    }
+}
+
 /// Arc 1.171's theme editor (SpaceStyleEditor), which Edit Theme Color… opens beside the
 /// sidebar and the Edit Space sheet shows inline. Measured from 2x captures of an offline Arc
 /// (1 Nov): a 355 × 503 pt card, the window behind it darkened by ~58%; a 340 pt dotted colour pad
@@ -12,16 +36,18 @@ import SwiftUI
 /// the intensity, the grain and Auto / Light / Dark, and builds the theme from them
 /// (SpaceThemeVariants): one colour is Arc's one-dot fill, two or three a gradient, and Auto
 /// always gets a light and a dark half (#155).
-struct SpaceStyleEditor: View {
-    @Environment(SidebarStore.self) private var store
+private struct ThemePadView: View {
+    let uniformColors: Binding<Bool>?
     @State private var theme: SpaceTheme
     @State private var pad: PadState
     let onChange: (SpaceTheme) -> Void
 
-    init(theme: SpaceTheme, onChange: @escaping (SpaceTheme) -> Void) {
+    init(theme: SpaceTheme, uniformColors: Binding<Bool>?, onChange: @escaping (SpaceTheme) -> Void) {
+        self.uniformColors = uniformColors
         _theme = State(initialValue: theme)
         // A one-colour theme stores its colour twice (a flat fill): one handle on the pad.
-        let key = theme.key ?? (theme.solid || Set(theme.colors).count == 1 ? Array(theme.colors.prefix(1)) : theme.colors)
+        let colors = theme.solid || Set(theme.colors).count == 1 ? Array(theme.colors.prefix(1)) : theme.colors
+        let key = theme.key ?? (theme == .arcDefault ? [] : colors)
         _pad = State(initialValue: PadState(key: key, wheel: theme.wheel ?? SpaceColorPresets.wheel(of: key),
                                             intensity: theme.intensity, noise: theme.noise, appearance: theme.appearance))
         // The page with the space's colour, else the one shown last (Arc: currentThemeEditorPresetPage).
@@ -71,10 +97,11 @@ struct SpaceStyleEditor: View {
             .frame(height: 70)
             .padding(.leading, 17)
             .padding(.trailing, 23)
-            .padding(.top, 22)
-            if store.settings.uniformSpaceColors {
-                Text("Turn off uniform colors in General › Space colors to see this theme.")
-                    .font(.caption)
+            .padding(.top, uniformColors == nil ? 22 : 10)
+            if let uniformColors {
+                Toggle("Use the same color for all Spaces", isOn: uniformColors)
+                    .toggleStyle(.switch).controlSize(.small)
+                    .font(.system(size: 12))
             }
             Spacer(minLength: 0)
         }
@@ -198,7 +225,7 @@ private struct ColorPad: View {
                 // Arc: pressing anywhere on the pad brings the main colour there, and it follows the drag.
                 .gesture(DragGesture(minimumDistance: 0).onChanged { g in place(handle: 0, at: g.location, centre: centre) })
                 if pad.key.isEmpty {
-                    Text("Tap to pick a color for this space")
+                    Text("Tap to pick a color")
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(ink.opacity(0.85))
                         .allowsHitTesting(false)

@@ -34,6 +34,10 @@ final class SidebarStore {
     }
     var settings = AppSettings() {
         didSet {
+            if oldValue.useCustomSpaceColor != settings.useCustomSpaceColor || oldValue.customSpaceColor != settings.customSpaceColor
+                || oldValue.customSpaceTheme != settings.customSpaceTheme {
+                uniformPreview = nil
+            }
             // Deliver the disable edge inline, including master-switch/replacement and same-turn off/on.
             if oldValue.askOnPage && !settings.askOnPage {
                 NotificationCenter.default.post(name: AskOnPage.disabledNotification, object: self)
@@ -529,13 +533,44 @@ final class SidebarStore {
 
     var macOSIsDark = false
 
+    private var uniformPreview: (editor: UUID, theme: SpaceTheme)?
+
+    var editableUniformTheme: SpaceTheme {
+        if let uniformPreview { return uniformPreview.theme }
+        guard settings.useCustomSpaceColor else { return .arcDefault }
+        if let theme = settings.customSpaceTheme { return theme }
+        let hex = settings.customSpaceColor
+        var theme = SpaceTheme(light: SpaceThemeVariants.uniform(color: hex, systemDark: false),
+                               dark: SpaceThemeVariants.uniform(color: hex, systemDark: true))
+        theme.key = [hex]
+        return theme
+    }
+
     var uniformTheme: SpaceTheme {
-        SpaceThemeVariants.uniform(color: settings.useCustomSpaceColor ? settings.customSpaceColor : nil,
-                                   systemDark: macOSIsDark)
+        editableUniformTheme.resolved(systemDark: macOSIsDark)
+    }
+
+    func usesUniformTheme(for spaceID: UUID?) -> Bool {
+        settings.uniformSpaceColors && !isStandalone(space: spaceID)
+    }
+
+    func previewUniformTheme(_ theme: SpaceTheme, editor: UUID) {
+        uniformPreview = (editor, theme)
+    }
+
+    func endUniformThemePreview(editor: UUID, keep: Bool) {
+        guard let preview = uniformPreview, preview.editor == editor else { return }
+        uniformPreview = nil
+        guard keep else { return }
+        var updated = settings
+        updated.customSpaceTheme = preview.theme
+        updated.customSpaceColor = preview.theme.key?.first ?? preview.theme.accent ?? updated.customSpaceColor
+        updated.useCustomSpaceColor = true
+        settings = updated
     }
 
     func displayTheme(for space: Space) -> SpaceTheme {
-        settings.uniformSpaceColors && !isStandalone(space: space.id) ? uniformTheme : space.theme
+        usesUniformTheme(for: space.id) ? uniformTheme : space.theme
     }
 
     func focusedTheme(window id: UUID? = nil) -> SpaceTheme {

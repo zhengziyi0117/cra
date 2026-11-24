@@ -10,6 +10,8 @@ enum SpaceProfileChoice: Hashable {
 /// card Edit Theme Color… opens: pad, presets, intensity, grain, Auto / Light / Dark). An existing
 /// space shows each change at once (`onPreview`); Cancel puts its theme back, Save writes it.
 struct SpaceEditorView: View {
+    @Environment(SidebarStore.self) private var store
+    let editorID: UUID
     let existing: Space?
     let profiles: [BrowserProfile]
     /// The Default profile's name (#666).
@@ -36,10 +38,11 @@ struct SpaceEditorView: View {
                                  "📈", "🧠", "❤️", "⭐️", "🌙", "☕️", "🏃", "📷", "🎬", "🧩", "🪴", "🏔️", "🛠️", "💰", "📝", "🎯"]
 
     /// `initialProfile` is a new space's starting profile (Arc: the focused space's).
-    init(existing: Space?, profiles: [BrowserProfile], defaultProfileName: String = ProfileNames.defaultName, initialProfile: UUID? = nil,
+    init(editorID: UUID, existing: Space?, profiles: [BrowserProfile], defaultProfileName: String = ProfileNames.defaultName, initialProfile: UUID? = nil,
          searchEngines: [ChromiumSearchEngine] = [], defaultEngineName: String = "Google",
          onSave: @escaping (String, SpaceIcon, SpaceTheme, SpaceProfileChoice, String, String?) -> Void, onCancel: @escaping () -> Void,
          onPreview: @escaping (SpaceTheme) -> Void = { _ in }) {
+        self.editorID = editorID
         self.existing = existing
         self.profiles = profiles
         self.defaultProfileName = defaultProfileName
@@ -85,7 +88,7 @@ struct SpaceEditorView: View {
                     Spacer(minLength: 0)
                 }
                 .frame(width: 260)
-                SpaceStyleEditor(theme: theme) { t in
+                SpaceStyleEditor(spaceID: existing?.id, editorID: editorID, privateTheme: { theme }) { t in
                     theme = t
                     onPreview(t)
                 }
@@ -106,7 +109,8 @@ struct SpaceEditorView: View {
 
     /// The space as the sidebar draws it, with the theme being edited.
     private var preview: some View {
-        ZStack {
+        let theme = store.usesUniformTheme(for: existing?.id) ? store.uniformTheme : self.theme
+        return ZStack {
             SpaceBackground(palette: theme.palette)
             VStack(spacing: 6) {
                 HStack(spacing: 6) {
