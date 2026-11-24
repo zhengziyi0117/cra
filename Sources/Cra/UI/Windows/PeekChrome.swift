@@ -134,7 +134,7 @@ final class PeekControlsPanel: NSPanel {
         layoutFrames(wide: hold != nil)
         let tones = TooltipTones(theme: theme)
         let fill = NSColor(srgbRed: tones.fill.r, green: tones.fill.g, blue: tones.fill.b, alpha: 1)
-        let ink = NSColor(LittlePalette.spaceName(theme))
+        let ink = NSColor(LittleStripTones(target: theme.shown, systemDark: true).spaceName)
         for v in views { v.paint(fill: fill, ink: ink, scale: backingScaleFactor) }
     }
 

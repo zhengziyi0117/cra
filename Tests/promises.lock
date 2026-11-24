@@ -574,7 +574,7 @@
 #322   Tests/Scenarios/copy-picked-links.scenario  6e69f3272cbf
 #326   Packages/CraCore/Tests/CraCoreTests/SidebarModelTests.swift::automaticPictureInPictureIsPerSite  5dc70ea0af0b
 #326   Tests/BrowserManagerLifecycleTests.swift::pictureInPicturePerSiteCase  1260bcff5f0e
-#329   Packages/CraCore/Tests/CraCoreTests/LittleStripTonesTests.swift::theStripIsArcsGradientWhateverTheSpaceTheme  249428d34570
+#329   Packages/CraCore/Tests/CraCoreTests/LittleStripTonesTests.swift::theStripFollowsMacOSAcrossSpaces  c75242377030
 #331   Packages/CraCore/Tests/CraCoreTests/LittleMoveMenuTests.swift::hangsFromTheWindowsTopRightCorner  befc647f4f56
 #331   Packages/CraCore/Tests/CraCoreTests/LittleMoveMenuTests.swift::longListsScroll  e26a1474f24e
 #331   Packages/CraCore/Tests/CraCoreTests/LittleMoveMenuTests.swift::noResults  433eb120d5e7
@@ -1148,10 +1148,10 @@
 #548   Packages/CraCore/Tests/CraCoreTests/LoadingIndicatorPlacementTests.swift::inkFollowsWhatIsUnderTheBar  c1270445b16c
 #548   Tests/Scenarios/loading-bar-edge-to-edge.scenario  223e23ac6df0
 #548   Tests/Scenarios/loading-bar-full-screen.scenario  9f4ff50f7b0b
-#549   Packages/CraCore/Tests/CraCoreTests/LittleStripTonesTests.swift::anAutoThemesNameFollowsMacOSButItsStripDoesnt  8f73c859196b
+#549   Packages/CraCore/Tests/CraCoreTests/LittleStripTonesTests.swift::anAutoThemesNameAndStripFollowMacOS  7c82211d3cf0
 #549   Packages/CraCore/Tests/CraCoreTests/LittleStripTonesTests.swift::onlyTheSpaceNameTakesTheSpacesColour  efd6d2934c10
-#549   Packages/CraCore/Tests/CraCoreTests/LittleStripTonesTests.swift::theStripIsArcsGradientWhateverTheSpaceTheme  249428d34570
-#549   Tests/Scenarios/little-window-strip-theme.scenario  e7fdc52d6742
+#549   Packages/CraCore/Tests/CraCoreTests/LittleStripTonesTests.swift::theStripFollowsMacOSAcrossSpaces  c75242377030
+#549   Tests/Scenarios/little-window-strip-theme.scenario  cbfcf01e0e09
 #550   Tests/FloatingSidebarTests.swift::theShadowStaysUnderTheSidebar  831fdb6d0b6c
 #550   Tests/Scenarios/floating-sidebar-shadow.scenario  a59106d5ba21
 #551   Packages/CraCore/Tests/CraCoreTests/CommandBarClosingTests.swift::leavingCraKeepsTheBarOpen  d0842a6daad8

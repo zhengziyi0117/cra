@@ -1,9 +1,6 @@
 import CraCore
 import Testing
 
-/// Arc's Little Arc draws its strip from the default theme's dark palette in every space (1.168 with a
-/// yellow space focused; 1.172.1, the same pixels after switching spaces, #329). #549 reported that the
-/// strip doesn't take a green-teal space's theme: that is Arc's behaviour, kept on purpose.
 struct LittleStripTonesTests {
     static func bytes(_ c: RGB) -> [Int] { [c.r, c.g, c.b].map { Int(($0 * 255).rounded()) } }
 
@@ -20,10 +17,10 @@ struct LittleStripTonesTests {
 
     @Test(.bug("https://github.com/VictorKildahl/cra/issues/549"), .bug("https://github.com/VictorKildahl/cra/issues/329"),
           arguments: themes, [false, true])
-    func theStripIsArcsGradientWhateverTheSpaceTheme(theme: SpaceTheme, systemDark: Bool) {
+    func theStripFollowsMacOSAcrossSpaces(theme: SpaceTheme, systemDark: Bool) {
         let tones = LittleStripTones(target: theme, systemDark: systemDark)
-        #expect(Self.bytes(tones.left) == [0x24, 0x24, 0x38])
-        #expect(Self.bytes(tones.right) == [0x31, 0x23, 0x39])
+        #expect(Self.bytes(tones.left) == (systemDark ? [0x24, 0x24, 0x38] : [0xf2, 0xf2, 0xf6]))
+        #expect(Self.bytes(tones.right) == (systemDark ? [0x31, 0x23, 0x39] : [0xec, 0xea, 0xf0]))
     }
 
     @Test(.bug("https://github.com/VictorKildahl/cra/issues/549"))
@@ -41,11 +38,11 @@ struct LittleStripTonesTests {
     }
 
     @Test(.bug("https://github.com/VictorKildahl/cra/issues/549"))
-    func anAutoThemesNameFollowsMacOSButItsStripDoesnt() {
+    func anAutoThemesNameAndStripFollowMacOS() {
         let light = LittleStripTones(target: Self.themes[4], systemDark: false)
         let dark = LittleStripTones(target: Self.themes[4], systemDark: true)
-        #expect(light.left == dark.left && light.right == dark.right)
-        #expect(Self.bytes(light.spaceName) == [253, 243, 208])
+        #expect(light.left != dark.left && light.right != dark.right)
+        #expect(Self.bytes(light.spaceName) == [109, 94, 39])
         #expect(light.spaceName != dark.spaceName)
     }
 }

@@ -188,13 +188,24 @@ final class SystemAppearance: @unchecked Sendable {
     static let shared = SystemAppearance()
     /// Written on the main thread only.
     private(set) var isDark = false
+    /// The desktop appearance, independent of Cra's website appearance override.
+    private(set) var macOSIsDark = false
     @ObservationIgnored private var observation: NSKeyValueObservation?
 
     @MainActor func start() {
+        updateDesktopAppearance()
+        DistributedNotificationCenter.default().addObserver(forName: Notification.Name("AppleInterfaceThemeChangedNotification"),
+                                                            object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.updateDesktopAppearance() }
+        }
         update()
         observation = NSApp.observe(\.effectiveAppearance) { [weak self] _, _ in
             MainActor.assumeIsolated { self?.update() }
         }
+    }
+
+    @MainActor private func updateDesktopAppearance() {
+        macOSIsDark = UserDefaults.standard.string(forKey: "AppleInterfaceStyle") == "Dark"
     }
 
     @MainActor private func update() {

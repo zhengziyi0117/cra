@@ -85,68 +85,41 @@ enum LittleMetrics {
     static let openDuration: TimeInterval = 0.12
 }
 
-/// Arc renders Little Arc with the default profile's dark palette whatever the
-/// focused space's theme is (observed with the light "Victor" space focused; kept for #549).
-enum LittlePalette {
-    /// The strip, left to right: one gradient in every space (CraCore LittleStripTones, #329 #549).
-    /// The measured values wobble by a few units rather than rise, so two stops stay within them;
-    /// 1.168's flat #0C091C is gone (#329).
-    static let stripLeft = NSColor(LittleStripTones.stripLeft)
-    static let stripRight = NSColor(LittleStripTones.stripRight)
-    /// The address pill is a lighter wash over the strip (about #38394A on the left, #43394B on the
-    /// right, which is white at 9–10 %), so it follows the gradient. The hover is not measured.
-    static let pill = Color.white.opacity(0.09)
-    static let pillHover = Color.white.opacity(0.14)
-    /// The open padlock for an http page (Arc's `hasInsecureContext`): orange on a pale orange wash.
-    /// From the capture attached to #330: strokes about #E93700, and a tile that reads #4B3B45 over the
-    /// pill's #3A3A4B, which is that orange at about 10 %.
-    static let insecure = NSColor(srgbRed: 233 / 255, green: 55 / 255, blue: 0, alpha: 1)
-    static let iconHover = Color(red: 65 / 255, green: 57 / 255, blue: 70 / 255)
-    static let icon = Color(red: 110 / 255, green: 111 / 255, blue: 128 / 255)
-    static let iconHot = Color(red: 170 / 255, green: 168 / 255, blue: 180 / 255)
-    static let text = Color(red: 163 / 255, green: 161 / 255, blue: 169 / 255)
-    static let label = Color(red: 130 / 255, green: 131 / 255, blue: 146 / 255)
-    static let button = Color(red: 5 / 255, green: 6 / 255, blue: 37 / 255)
-    static let buttonBorder = Color(red: 29 / 255, green: 30 / 255, blue: 55 / 255)
-    static let buttonHover = Color(red: 22 / 255, green: 23 / 255, blue: 52 / 255)
-    static let badge = Color(red: 23 / 255, green: 24 / 255, blue: 50 / 255)
-    static let badgeText = Color(red: 139 / 255, green: 140 / 255, blue: 153 / 255)
-    /// The "Open in" menu's magnifier, ∧ and "No results", and its placeholder (Arc 1.172.1, #331).
-    static let moveMenuGlyph = Color(red: 80 / 255, green: 81 / 255, blue: 102 / 255)
-    static let moveMenuPlaceholder = Color(red: 142 / 255, green: 143 / 255, blue: 157 / 255)
-    // Hover tips (measured): navy pill, lavender-white text, pale key caps with blue glyphs.
-    static let tooltip = Color(red: 10 / 255, green: 13 / 255, blue: 75 / 255)
-    static let tooltipText = Color(red: 222 / 255, green: 223 / 255, blue: 253 / 255)
-    static let tooltipBorder = Color(red: 34 / 255, green: 37 / 255, blue: 93 / 255)
-    static let tooltipCap = Color(red: 211 / 255, green: 212 / 255, blue: 253 / 255)
-    static let tooltipCapGlyph = Color(red: 40 / 255, green: 46 / 255, blue: 252 / 255)
-    /// Arc's toast in a Little Arc ("Copied Current URL", 1.171, 3 Nov 2026, sRGB): deeper than the
-    /// default dark theme's in a browser window, the same in every space.
-    static let toast: ShinyToast.Colors = (NSColor(srgbRed: 41 / 255, green: 18 / 255, blue: 77 / 255, alpha: 1),
-                                           NSColor(srgbRed: 33 / 255, green: 16 / 255, blue: 61 / 255, alpha: 1),
-                                           NSColor(srgbRed: 33 / 255, green: 14 / 255, blue: 66 / 255, alpha: 1), .white)
-    /// ⌥⌘N's card (Arc 1.172.1, 10 Nov 2026, 2x captures attached to #337): the bar #14141C to #17141B
-    /// with a #4B4A50 hairline round it, the divider #2C2B32, the ✕ a #28262D tile with a #9C9A9E glyph.
-    /// Below a bar that shrank to its rows the window shows dark navy at the top left (about #0D0B1B)
-    /// running to plum at the bottom right (about #1C0A20), with grain that isn't drawn here.
-    static let cardBar = NSColor(srgbRed: 0x15 / 255, green: 0x14 / 255, blue: 0x1C / 255, alpha: 1)
-    static let cardBarBorder = NSColor(srgbRed: 0x4B / 255, green: 0x4A / 255, blue: 0x50 / 255, alpha: 1)
-    static let cardDivider = NSColor(srgbRed: 0x2C / 255, green: 0x2B / 255, blue: 0x32 / 255, alpha: 1)
-    static let cardClose = NSColor(srgbRed: 0x28 / 255, green: 0x26 / 255, blue: 0x2D / 255, alpha: 1)
-    static let cardCloseGlyph = NSColor(srgbRed: 0x9C / 255, green: 0x9A / 255, blue: 0x9E / 255, alpha: 1)
-    static let cardTopLeft = NSColor(srgbRed: 0x0D / 255, green: 0x0B / 255, blue: 0x1B / 255, alpha: 1)
-    static let cardBottomRight = NSColor(srgbRed: 0x1C / 255, green: 0x0A / 255, blue: 0x20 / 255, alpha: 1)
-    /// Behind the strip and around the page, where no gradient is drawn.
-    static let barNS = stripLeft
-    static let buttonNS = NSColor(red: 5 / 255, green: 6 / 255, blue: 37 / 255, alpha: 1)
+/// Concrete colours for Little Window's layers, selected independently of the website appearance.
+struct LittlePalette {
+    static let light = LittlePalette(dark: false)
+    static let dark = LittlePalette(dark: true)
+    static var current: Self { SystemAppearance.shared.macOSIsDark ? dark : light }
 
-    /// The space name in "Open in Victor": the target theme's light foreground
-    /// (Arc: semanticColorPalette.dark.foregroundPrimary; Victor → #FCEDBC).
-    static func spaceName(_ theme: SpaceTheme) -> Color { Color(tones(theme).spaceName) }
+    let bar, button, border, hover, badge, pill, pillHover: NSColor
+    let cardBar, cardBarBorder, cardDivider, cardClose, cardCloseGlyph, cardTopLeft, cardBottomRight: NSColor
+    let tooltip, tooltipText, tooltipBorder, tooltipCap, tooltipCapGlyph: NSColor
+    let toast: ShinyToast.Colors
+    static let insecure = NSColor(hex: "#E93700")
 
-    /// The strip's colours for the space "Open in" names (CraCore LittleStripTones).
-    static func tones(_ theme: SpaceTheme) -> LittleStripTones {
-        LittleStripTones(target: theme, systemDark: SystemAppearance.shared.isDark)
+    private init(dark: Bool) {
+        func color(_ light: String, _ night: String) -> NSColor { NSColor(hex: dark ? night : light) }
+        bar = NSColor(dark ? LittleStripTones.stripLeft : LittleStripTones.lightLeft)
+        button = color("#FCFBFD", "#050625")
+        border = color("#D8D6DE", "#1D1E37")
+        hover = color("#E5E3EB", "#161734")
+        badge = color("#ECEBF0", "#171832")
+        pill = (dark ? NSColor.white : .black).withAlphaComponent(dark ? 0.09 : 0.045)
+        pillHover = (dark ? NSColor.white : .black).withAlphaComponent(dark ? 0.14 : 0.08)
+        cardBar = color("#FAFAFC", "#15141C")
+        cardBarBorder = color("#D4D3D9", "#4B4A50")
+        cardDivider = color("#E1E0E5", "#2C2B32")
+        cardClose = color("#E9E8EC", "#28262D")
+        cardCloseGlyph = color("#59575F", "#9C9A9E")
+        cardTopLeft = color("#F7F7FB", "#0D0B1B")
+        cardBottomRight = color("#EEECF2", "#1C0A20")
+        tooltip = color("#FAF9FD", "#0A0D4B")
+        tooltipText = color("#2C2937", "#DEDFFD")
+        tooltipBorder = color("#D9D6E1", "#22255D")
+        tooltipCap = color("#E9E6EF", "#D3D4FD")
+        tooltipCapGlyph = color("#443D70", "#282EFC")
+        toast = (color("#FAF9FD", "#29124D"), color("#F6F4F9", "#21103D"),
+                 color("#F2EFF6", "#210E42"), dark ? .white : .black)
     }
 }
 
@@ -292,8 +265,6 @@ final class LittleWindowController: NSWindowController, NSWindowDelegate, @preco
         window.isReleasedWhenClosed = false
         window.tabbingMode = .disallowed
         window.title = "Little Window"
-        window.appearance = NSAppearance(named: .darkAqua)
-        window.backgroundColor = LittlePalette.barNS
         window.contentView = shell
         // Tab (with Full Keyboard Access) reaches a Peek's bar buttons as they are now (ToolbarKeyboard).
         window.autorecalculatesKeyViewLoop = true
@@ -362,6 +333,17 @@ final class LittleWindowController: NSWindowController, NSWindowDelegate, @preco
         commandHost = CommandBarView(controller: commandBar, favicons: app.favicons)
         commandPanel.contentView = commandHost
         commandPanel.delegate = self
+        observeChanges(of: { [weak window] in window == nil ? nil : SystemAppearance.shared.macOSIsDark }) { [weak self] dark in
+            guard let self, let dark, let window = self.window else { return }
+            let appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
+            window.appearance = appearance
+            self.commandPanel.appearance = appearance
+            self.popup?.appearance = appearance
+            if !self.isPeek { window.backgroundColor = LittlePalette.current.bar }
+            self.shell.applyPalette()
+            (self.popup?.contentView as? LittleSpacesPopup)?.applyPalette()
+            self.hideTooltip()
+        }
         commandBar.onCommit = { [weak self] s, typed, mode in self?.handleCommit(s, typed: typed, mode: mode) }
         commandBar.onClose = { [weak self] in self?.hideCommandPanel() }
         NotificationCenter.default.addObserver(forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main) { [weak self] _ in
@@ -612,7 +594,6 @@ final class LittleWindowController: NSWindowController, NSWindowDelegate, @preco
         guard isCard, let window else { return }
         isCard = false
         commandHost.card = nil
-        commandPanel.appearance = nil
         shell.isCard = false
         shell.hidesBar = false
         for type in [NSWindow.ButtonType.closeButton, .miniaturizeButton, .zoomButton] { window.standardWindowButton(type)?.isHidden = false }
@@ -1276,8 +1257,6 @@ final class LittleWindowController: NSWindowController, NSWindowDelegate, @preco
         commandBar.attached = false
         commandBar.panelWidth = isCard ? window.frame.width - 2 * LittleMetrics.edgeInset
             : min(LittleMetrics.commandBarWidth, window.frame.width - 40)
-        // Little Arc's palette is dark whatever macOS uses, the card's bar with it.
-        commandPanel.appearance = isCard ? NSAppearance(named: .darkAqua) : nil
         positionCommandPanel()
         if commandPanel.parent == nil { window.addChildWindow(commandPanel, ordered: .above) }
         commandBarOpenedAt = Date()
@@ -1572,6 +1551,7 @@ final class LittleWindowController: NSWindowController, NSWindowDelegate, @preco
     private func showTooltip(_ text: String, caps: [String], for h: LittleHover) {
         guard let window, state.hover == h, popup == nil, !commandBar.isOpen else { return }
         let panel = LittleTooltipPanel()
+        panel.appearance = window.appearance
         let tip = LittleTooltipView(text: text, caps: caps)
         let size = tip.frame.size
         panel.contentView = tip
@@ -1609,6 +1589,7 @@ final class LittleWindowController: NSWindowController, NSWindowDelegate, @preco
         tooltipTimer?.invalidate(); hideTooltip()
         commandBar.close()
         let panel = LittlePopupPanel()
+        panel.appearance = window.appearance
         panel.contentView = LittleSpacesPopup(state: state, store: store,
                                               onPick: { [weak self] sid in self?.closePopup(); self?.promote(to: sid) },
                                               onClose: { [weak self] in self?.closePopup() })
@@ -1849,7 +1830,7 @@ final class LittleWindowController: NSWindowController, NSWindowDelegate, @preco
         guard let window, let content = window.contentView else { return }
         slowResponseShown = false
         toast.show(text, keyCap: keyCap, action: action, page: content.convert(content.bounds, to: nil), in: window,
-                   colors: LittlePalette.toast)
+                   colors: LittlePalette.current.toast)
     }
 
     /// The Peek's user closes (its Close button, ⌘W, Esc, a click outside) go through here. A Peek on
@@ -2164,7 +2145,7 @@ final class LittleWindowController: NSWindowController, NSWindowDelegate, @preco
                            CraLog.note("Little Window: page \(host) stopped from the notice")
                            browser?.stopLoading()
                        },
-                       page: content.convert(content.bounds, to: nil), in: window, colors: LittlePalette.toast,
+                       page: content.convert(content.bounds, to: nil), in: window, colors: LittlePalette.current.toast,
                        onClose: { [weak self] in
                            self?.slowResponse.close()
                            self?.slowResponseShown = false
@@ -2647,9 +2628,8 @@ final class LittleShellView: NSView {
     override init(frame: NSRect) {
         super.init(frame: frame)
         wantsLayer = true
-        layer?.backgroundColor = LittlePalette.barNS.cgColor
+        applyPalette()
         // Top left to bottom right (the layer's y runs up).
-        cardBackground.colors = [LittlePalette.cardTopLeft.cgColor, LittlePalette.cardBottomRight.cgColor]
         cardBackground.startPoint = CGPoint(x: 0, y: 1)
         cardBackground.endPoint = CGPoint(x: 1, y: 0)
         cardBackground.isHidden = true
@@ -2665,6 +2645,12 @@ final class LittleShellView: NSView {
     }
 
     required init?(coder: NSCoder) { fatalError() }
+
+    func applyPalette() {
+        let palette = LittlePalette.current
+        layer?.backgroundColor = palette.bar.cgColor
+        cardBackground.colors = [palette.cardTopLeft.cgColor, palette.cardBottomRight.cgColor]
+    }
 
     func setPeekBar(_ bar: PeekBarView) {
         toolbarHost.removeFromSuperview()
@@ -2937,7 +2923,7 @@ final class LittleTooltipPanel: NSPanel {
     }
 }
 
-/// Arc's hover tip: 28pt navy pill, 14pt semibold text, 20pt key caps.
+/// A 28 pt hover tip with 14 pt semibold text and 20 pt key caps.
 final class LittleTooltipView: NSView {
     init(text: String, caps: [String]) {
         super.init(frame: .zero)
@@ -2949,27 +2935,27 @@ final class LittleTooltipView: NSView {
         setFrameSize(NSSize(width: pillW + 4, height: 32))
         let pill = NSView(frame: NSRect(x: 2, y: 2, width: pillW, height: 28))
         pill.wantsLayer = true
-        pill.layer?.backgroundColor = NSColor(LittlePalette.tooltip).cgColor
+        pill.layer?.backgroundColor = LittlePalette.current.tooltip.cgColor
         pill.layer?.cornerRadius = 10
         pill.layer?.cornerCurve = .continuous
         pill.layer?.borderWidth = 1
-        pill.layer?.borderColor = NSColor(LittlePalette.tooltipBorder).cgColor
+        pill.layer?.borderColor = LittlePalette.current.tooltipBorder.cgColor
         addSubview(pill)
         let label = NSTextField.sidebarLabel(size: 14, weight: .semibold)
         label.stringValue = text
-        label.textColor = NSColor(LittlePalette.tooltipText)
+        label.textColor = LittlePalette.current.tooltipText
         label.frame = NSRect(x: 10 - SidebarText.inset, y: (28 - 17) / 2, width: textW + 2 * SidebarText.inset, height: 17)
         pill.addSubview(label)
         var x = 10 + textW + 6 + 2
         for c in caps {
             let cap = NSView(frame: NSRect(x: x, y: 4, width: 20, height: 20))
             cap.wantsLayer = true
-            cap.layer?.backgroundColor = NSColor(LittlePalette.tooltipCap).cgColor
+            cap.layer?.backgroundColor = LittlePalette.current.tooltipCap.cgColor
             cap.layer?.cornerRadius = 5
             cap.layer?.cornerCurve = .continuous
             let glyph = NSTextField.sidebarLabel(size: 12, weight: .semibold)
             glyph.stringValue = c
-            glyph.textColor = NSColor(LittlePalette.tooltipCapGlyph)
+            glyph.textColor = LittlePalette.current.tooltipCapGlyph
             glyph.alignment = .center
             glyph.frame = NSRect(x: -SidebarText.inset, y: (20 - 15) / 2, width: 20 + 2 * SidebarText.inset, height: 15)
             cap.addSubview(glyph)
@@ -3063,19 +3049,17 @@ final class LittleToolbarView: NSView {
         search.imageScaling = .scaleNone
         showSecurity(insecure: false)
         pill.addSubview(search)
-        urlLabel.textColor = NSColor(LittlePalette.text)
+        urlLabel.textColor = NSColor.secondaryLabelColor
         urlLabel.alignment = .center
         pill.addSubview(urlLabel)
         pill.addSubview(puzzle)
         pill.addSubview(link)
         pill.addSubview(profileChip)
         openButton.wantsLayer = true
-        openButton.layer?.backgroundColor = LittlePalette.buttonNS.cgColor
         openButton.layer?.cornerRadius = 7
         openButton.layer?.cornerCurve = .continuous
         openButton.layer?.masksToBounds = true
         openButton.layer?.borderWidth = 1
-        openButton.layer?.borderColor = NSColor(LittlePalette.buttonBorder).cgColor
         addSubview(openButton)
         openPart.wantsLayer = true
         openButton.addSubview(openPart)
@@ -3083,17 +3067,15 @@ final class LittleToolbarView: NSView {
         badge.wantsLayer = true
         badge.layer?.cornerRadius = 4
         badge.layer?.cornerCurve = .continuous
-        badge.layer?.backgroundColor = NSColor(LittlePalette.badge).cgColor
         badgeLabel.stringValue = "⌘O"
-        badgeLabel.textColor = NSColor(LittlePalette.badgeText)
+        badgeLabel.textColor = NSColor.secondaryLabelColor
         badge.addSubview(badgeLabel)
         openPart.addSubview(badge)
         divider.wantsLayer = true
-        divider.layer?.backgroundColor = NSColor(LittlePalette.buttonBorder).cgColor
         openButton.addSubview(divider)
         chevronPart.wantsLayer = true
         chevron.imageScaling = .scaleNone
-        chevron.contentTintColor = NSColor(LittlePalette.label)
+        chevron.contentTintColor = NSColor.secondaryLabelColor
         chevronPart.addSubview(chevron)
         openButton.addSubview(chevronPart)
         observe()
@@ -3104,13 +3086,18 @@ final class LittleToolbarView: NSView {
     override var isFlipped: Bool { true }
 
     private func observe() {
-        let (url, hover, popupOpen, space, spaces, profile, waiting) = withObservationTracking {
+        let (url, hover, popupOpen, space, spaces, profile, waiting, dark) = withObservationTracking {
             (state.url, state.hover, state.popupOpen, store.space(state.targetSpaceID) ?? store.focusedSpace, store.spaceOrder.count,
              // Arc's shouldShowProfileIndicators: only once there is a profile besides Default.
-             store.profiles.isEmpty ? nil : store.profileName(state.profileID), state.awaitsFirstResponse)
+             store.profiles.isEmpty ? nil : store.profileName(state.profileID), state.awaitsFirstResponse, SystemAppearance.shared.macOSIsDark)
         } onChange: { [weak self] in
             Task { @MainActor in self?.observe() }
         }
+        let palette = dark ? LittlePalette.dark : .light
+        openButton.layer?.backgroundColor = palette.button.cgColor
+        openButton.layer?.borderColor = palette.border.cgColor
+        badge.layer?.backgroundColor = palette.badge.cgColor
+        divider.layer?.backgroundColor = palette.border.cgColor
         let chevronShown = LittleMoveMenu.showsChevron(spaces: spaces)
         if state.showsChevron != chevronShown { state.showsChevron = chevronShown }
         divider.isHidden = !chevronShown
@@ -3120,26 +3107,26 @@ final class LittleToolbarView: NSView {
         // Arc keeps the magnifier while a first response is awaited.
         showSecurity(insecure: !waiting && LittleAddress.isInsecure(url))
         pill.toolTip = url
-        pill.layer?.backgroundColor = NSColor(hover == .pill ? LittlePalette.pillHover : LittlePalette.pill).cgColor
+        pill.layer?.backgroundColor = (hover == .pill ? palette.pillHover : palette.pill).cgColor
         puzzle.hovered = hover == .puzzle
         link.hovered = hover == .link
         profileChip.isHidden = profile == nil
         profileChip.name = profile ?? ""
         profileChip.hovered = hover == .profile
-        let tones = LittlePalette.tones(space.theme)
+        let tones = LittleStripTones(target: space.theme, systemDark: dark)
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         gradient.colors = [NSColor(tones.left).cgColor, NSColor(tones.right).cgColor]
         CATransaction.commit()
         let openTitle = SpaceMenuTitle.named(space.title, prefix: "Open in ")
         let text = NSMutableAttributedString(string: "Open in ", attributes: [.font: NSFont.systemFont(ofSize: 13, weight: .medium),
-                                                                             .foregroundColor: NSColor(LittlePalette.label)])
+                                                                             .foregroundColor: NSColor.secondaryLabelColor])
         text.append(NSAttributedString(string: openTitle.displayedName, attributes: [.font: NSFont.systemFont(ofSize: 13, weight: .bold),
                                                                          .foregroundColor: NSColor(tones.spaceName)]))
         openLabel.attributedStringValue = text
         openButton.toolTip = "Open this page in \(space.title) as a tab (⌘O)"
-        openPart.layer?.backgroundColor = hover == .open ? NSColor(LittlePalette.buttonHover).cgColor : nil
-        chevronPart.layer?.backgroundColor = hover == .chevron ? NSColor(LittlePalette.buttonHover).cgColor : nil
+        openPart.layer?.backgroundColor = hover == .open ? palette.hover.cgColor : nil
+        chevronPart.layer?.backgroundColor = hover == .chevron ? palette.hover.cgColor : nil
         chevron.image = SidebarSymbols.image(popupOpen ? "chevron.up" : "chevron.down", size: 10, weight: .bold)
         needsLayout = true
     }
@@ -3150,7 +3137,7 @@ final class LittleToolbarView: NSView {
         isInsecure = insecure
         search.layer?.backgroundColor = insecure ? LittlePalette.insecure.withAlphaComponent(0.10).cgColor : nil
         search.image = SidebarSymbols.image(insecure ? "lock.open" : "magnifyingglass", size: 13, weight: .medium)
-        search.contentTintColor = insecure ? LittlePalette.insecure : NSColor(LittlePalette.icon)
+        search.contentTintColor = insecure ? LittlePalette.insecure : NSColor.secondaryLabelColor
     }
 
     override func layout() {
@@ -3258,8 +3245,8 @@ final class LittleProfileChip: NSView {
     var name = "" { didSet { if name != oldValue { label.stringValue = name; needsLayout = true } } }
     var hovered = false {
         didSet {
-            layer?.backgroundColor = NSColor.white.withAlphaComponent(hovered ? 46 / 255 : 31 / 255).cgColor
-            let ink = NSColor(hovered ? LittlePalette.iconHot : LittlePalette.text)
+            layer?.backgroundColor = (hovered ? LittlePalette.current.pillHover : LittlePalette.current.pill).cgColor
+            let ink: NSColor = hovered ? .labelColor : .secondaryLabelColor
             label.textColor = ink
             face.ink = ink
             chevron.contentTintColor = ink
@@ -3304,8 +3291,8 @@ private final class LittleIconView: NSView {
     private let glyph = NSImageView()
     var hovered = false {
         didSet {
-            glyph.contentTintColor = NSColor(hovered ? LittlePalette.iconHot : LittlePalette.icon)
-            layer?.backgroundColor = hovered ? NSColor(LittlePalette.iconHover).cgColor : nil
+            glyph.contentTintColor = hovered ? .labelColor : .secondaryLabelColor
+            layer?.backgroundColor = hovered ? LittlePalette.current.hover.cgColor : nil
         }
     }
 
@@ -3316,7 +3303,7 @@ private final class LittleIconView: NSView {
         layer?.cornerCurve = .continuous
         glyph.image = SidebarSymbols.image(symbol, size: size)
         glyph.imageScaling = .scaleNone
-        glyph.contentTintColor = NSColor(LittlePalette.icon)
+        glyph.contentTintColor = NSColor.secondaryLabelColor
         glyph.frame = bounds
         glyph.autoresizingMask = [.width, .height]
         addSubview(glyph)
@@ -3354,36 +3341,33 @@ final class LittleSpacesPopup: NSView, NSTextFieldDelegate {
         self.onClose = onClose
         super.init(frame: .zero)
         wantsLayer = true
-        layer?.backgroundColor = LittlePalette.buttonNS.cgColor
         layer?.cornerRadius = LittleMoveMenu.cornerRadius
         layer?.cornerCurve = .continuous
         layer?.masksToBounds = true
         layer?.borderWidth = LittleMoveMenu.border
-        layer?.borderColor = NSColor(LittlePalette.buttonBorder).cgColor
         let h = LittleMoveMenu.headerHeight
         let glass = NSImageView(frame: NSRect(x: 16, y: 0, width: 14, height: h))
         glass.image = SidebarSymbols.image("magnifyingglass", size: 13, weight: .medium)
-        glass.contentTintColor = NSColor(LittlePalette.moveMenuGlyph)
+        glass.contentTintColor = .secondaryLabelColor
         glass.imageScaling = .scaleNone
         addSubview(glass)
         field.isBordered = false
         field.drawsBackground = false
         field.focusRingType = .none
         field.font = .systemFont(ofSize: 13)
-        field.textColor = NSColor.white.withAlphaComponent(0.9)
+        field.textColor = .labelColor
         field.placeholderAttributedString = NSAttributedString(string: "Search Spaces...", attributes: [
-            .font: NSFont.systemFont(ofSize: 13), .foregroundColor: NSColor(LittlePalette.moveMenuPlaceholder)])
+            .font: NSFont.systemFont(ofSize: 13), .foregroundColor: NSColor.placeholderTextColor])
         field.usesSingleLineMode = true
         field.cell?.isScrollable = true
         field.delegate = self
         addSubview(field)
         // Arc 1.172.1: a plain ∧ after an 18 pt rule (1.168 had a filled 28 pt button).
         divider.wantsLayer = true
-        divider.layer?.backgroundColor = NSColor(LittlePalette.buttonBorder).cgColor
         addSubview(divider)
         let up = NSImageView(frame: NSRect(x: 0, y: 0, width: 16, height: 16))
         up.image = SidebarSymbols.image("chevron.up", size: 11, weight: .semibold)
-        up.contentTintColor = NSColor(LittlePalette.moveMenuGlyph)
+        up.contentTintColor = .secondaryLabelColor
         up.imageScaling = .scaleNone
         close.addSubview(up)
         addSubview(close)
@@ -3397,9 +3381,18 @@ final class LittleSpacesPopup: NSView, NSTextFieldDelegate {
         addSubview(scroll)
         empty.stringValue = "No results"
         empty.alignment = .center
-        empty.textColor = NSColor(LittlePalette.moveMenuGlyph)
+        empty.textColor = .secondaryLabelColor
         addSubview(empty)
+        applyPalette()
         rebuild()
+    }
+
+    func applyPalette() {
+        let palette = LittlePalette.current
+        layer?.backgroundColor = palette.button.cgColor
+        layer?.borderColor = palette.border.cgColor
+        divider.layer?.backgroundColor = palette.border.cgColor
+        refreshSelection()
     }
 
     required init?(coder: NSCoder) { fatalError() }
@@ -3442,7 +3435,7 @@ final class LittleSpacesPopup: NSView, NSTextFieldDelegate {
             row.addSubview(tile)
             let title = NSTextField.sidebarLabel(size: LittleMoveMenu.titleSize, weight: .semibold)
             title.stringValue = s.title
-            title.textColor = NSColor.white.withAlphaComponent(0.82)
+            title.textColor = .labelColor
             let tx = LittleMoveMenu.textX
             title.frame = NSRect(x: tx - SidebarText.inset, y: (rh - 16) / 2,
                                  width: LittleMoveMenu.width - tx - 14 + 2 * SidebarText.inset, height: 16)
@@ -3462,7 +3455,7 @@ final class LittleSpacesPopup: NSView, NSTextFieldDelegate {
 
     private func refreshSelection() {
         for (i, r) in rows.enumerated() {
-            r.layer?.backgroundColor = i == selected ? NSColor(LittlePalette.buttonHover).cgColor : nil
+            r.layer?.backgroundColor = i == selected ? LittlePalette.current.hover.cgColor : nil
         }
     }
 

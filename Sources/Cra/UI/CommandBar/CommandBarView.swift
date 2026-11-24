@@ -182,11 +182,12 @@ final class CommandBarView: NSView {
         material.isHidden = card != nil
         closeTile.isHidden = card == nil
         if card != nil {
-            tint.layer?.backgroundColor = LittlePalette.cardBar.cgColor
-            border.strokeColor = LittlePalette.cardBarBorder.cgColor
-            divider.layer?.backgroundColor = LittlePalette.cardDivider.cgColor
-            closeTile.layer?.backgroundColor = LittlePalette.cardClose.cgColor
-            closeTile.contentTintColor = LittlePalette.cardCloseGlyph
+            let palette = LittlePalette.current
+            tint.layer?.backgroundColor = palette.cardBar.cgColor
+            border.strokeColor = palette.cardBarBorder.cgColor
+            divider.layer?.backgroundColor = palette.cardDivider.cgColor
+            closeTile.layer?.backgroundColor = palette.cardClose.cgColor
+            closeTile.contentTintColor = palette.cardCloseGlyph
         }
         let scope = c.scope
         if c.isOpen, (scope == nil) != (shownScope == nil) {

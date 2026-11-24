@@ -33,7 +33,7 @@ final class ArcTooltipController {
 
     /// The tones of the space a window is in (AppDelegate). Arc paints every tip in a browser
     /// window from that space's palette, whichever control or space icon it belongs to; windows
-    /// without a space (Little Windows) get nil and Little Arc's navy.
+    /// without a space (Little Windows) get nil and use the Little Window palette.
     var tones: (NSWindow) -> TooltipTones? = { _ in nil }
 
     private init() {
@@ -412,9 +412,11 @@ final class ArcTooltipLabel: NSView {
         }
 
         /// Little Arc's tip, whatever space is focused.
-        static let little = Colors(fill: NSColor(LittlePalette.tooltip), title: NSColor(LittlePalette.tooltipText),
-                                   cap: NSColor(LittlePalette.tooltipCap), capGlyph: NSColor(LittlePalette.tooltipCapGlyph),
-                                   capEdge: NSColor(red: 119 / 255, green: 122 / 255, blue: 211 / 255, alpha: 1))
+        static var little: Colors {
+            let palette = LittlePalette.current
+            return Colors(fill: palette.tooltip, title: palette.tooltipText, cap: palette.tooltipCap,
+                          capGlyph: palette.tooltipCapGlyph, capEdge: palette.tooltipBorder)
+        }
     }
 
     static func width(of text: String) -> CGFloat {
