@@ -225,7 +225,7 @@
 #152   Packages/CraCore/Tests/CraCoreTests/ThemeTonesTests.swift::victorsThemeRebuildsArcsShade  13a808fdd28a
 #153   Packages/CraCore/Tests/CraCoreTests/TabSleepPolicyTests.swift::defaultsAreArcs  36054bc6039e
 #153   Packages/CraCore/Tests/CraCoreTests/TabSleepPolicyTests.swift::earlierSwitchIsIgnored  e76746fb1993
-#153   Packages/CraCore/Tests/CraCoreTests/TabSleepPolicyTests.swift::eightHoursKeepsThemToo  b3da3d8b8221
+#153   Packages/CraCore/Tests/CraCoreTests/TabSleepPolicyTests.swift::eightHoursKeepsThemToo  d547d07f7b42
 #153   Packages/CraCore/Tests/CraCoreTests/TabSleepPolicyTests.swift::fourHoursKeepsTheTenUsedLast  727fd73ab07f
 #153   Packages/CraCore/Tests/CraCoreTests/TabSleepPolicyTests.swift::freezingReasonsThatKeepAPage  2a05a12e53eb
 #153   Packages/CraCore/Tests/CraCoreTests/TabSleepPolicyTests.swift::pressureSweepTiming  b11bee5c1aef
@@ -1560,7 +1560,7 @@
 #689   Packages/CraCore/Tests/CraCoreTests/LinkPreviewTests.swift::aHeldKeySaysWhatAClickWillDo  2c24d1b0aa7b
 #689   Packages/CraCore/Tests/CraCoreTests/LinkPreviewTests.swift::theHintFollowsWhatCraDoesWithTheClick  92e55c40efe3
 #689   Packages/CraCore/Tests/CraCoreTests/LinkPreviewTests.swift::withNoKeyHeldTheAddressShowsWithoutItsSchemeOrTrailingSlash  05b5fbd0e437
-#689   Tests/Scenarios/link-preview-arc.scenario  dc7d3ef9ce26
+#689   Tests/Scenarios/link-preview-arc.scenario  84d1de46b0c0
 #691   Packages/CraCore/Tests/CraCoreTests/FloatingSidebarKeepOutTests.swift::theAddressBeingEditedKeepsIt  3f2363b21dd2
 #691   Packages/CraCore/Tests/CraCoreTests/SidebarAddressEditTests.swift::aClickInTheFloatingSidebarClosesTheBar  ea9fc36584aa
 #691   Tests/Scenarios/sidebar-address-panel-click-away.scenario  7305967ee2f9
