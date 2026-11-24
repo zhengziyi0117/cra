@@ -42,3 +42,16 @@ cra://debug?previewDismiss=1
 cra://debug?notionCalendarPreview=1
 expect-log preview card shown: 238x255$
 cra://debug?previewDismiss=1
+# The card is drawn in its space's surface (ChromeSurface: Arc Default's gradient lifted halfway to white on
+# Light), light or dark with the sidebar (View ▸ Appearance), not a fixed black card.
+cra://action/appearanceLight
+wait 1
+cra://debug?gmailPreview=3
+expect-log preview card colors: light fill=F4EEF8$
+cra://debug?previewDismiss=1
+cra://action/appearanceDark
+wait 1
+cra://debug?gmailPreview=3
+expect-log preview card colors: dark fill=2F263A$
+cra://debug?previewDismiss=1
+cra://action/appearanceAutomatic

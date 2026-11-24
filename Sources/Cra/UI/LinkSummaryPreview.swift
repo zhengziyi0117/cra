@@ -353,9 +353,8 @@ final class LinkSummaryShellView: NSView {
 /// Arc's hover card. The answer card: the page's picture across the top when it has one, the
 /// quick summary in bold, then a row per detail with the model's SF Symbol, a bold label and the
 /// info, and a share button in the corner. The small card: the page's title in bold and its address.
-/// The loading card: two grey bars. The fill is the space's dark tooltip tone (black mixed with its
-/// shaded colour at 30 %) at 90 %: sampled #322c15 over Hacker News in a beige space, where
-/// TooltipTones gives #302913.
+/// The loading card: two grey bars. The fill is the space's surface at 90 % and the text its ink
+/// (SpaceChromeColors), as the space's tooltips and toasts.
 final class LinkSummaryCardView: NSView {
     enum Content {
         case loading
@@ -391,7 +390,6 @@ final class LinkSummaryCardView: NSView {
         layer?.addSublayer(banner)
         for label in [summary, empty, title, address] {
             label.isSelectable = false
-            label.textColor = .white
             addSubview(label)
         }
         summary.font = .systemFont(ofSize: 13, weight: .bold)
@@ -399,15 +397,12 @@ final class LinkSummaryCardView: NSView {
         summary.cell?.truncatesLastVisibleLine = true
         summary.preferredMaxLayoutWidth = L.width - 2 * L.margin
         empty.font = .systemFont(ofSize: 13, weight: .medium)
-        empty.textColor = NSColor.white.withAlphaComponent(0.55)
         title.maximumNumberOfLines = 2
         title.preferredMaxLayoutWidth = L.width - 2 * L.margin
         address.font = .systemFont(ofSize: 13)
-        address.textColor = NSColor.white.withAlphaComponent(0.85)
         address.lineBreakMode = .byTruncatingMiddle
         for _ in 0..<2 {
             let bar = CALayer()
-            bar.backgroundColor = NSColor.white.withAlphaComponent(0.14).cgColor
             bar.cornerRadius = L.barThickness / 2
             layer?.addSublayer(bar)
             bars.append(bar)
@@ -426,7 +421,8 @@ final class LinkSummaryCardView: NSView {
     }
 
     func show(_ content: Content, theme: SpaceTheme) {
-        let tones = TooltipTones(theme: theme)
+        let colors = SpaceChromeColors(theme.palette)
+        appearance = colors.appearance
         var image: NSImage?
         var result: LinkSummaryResult?
         var finished = false
@@ -447,11 +443,16 @@ final class LinkSummaryCardView: NSView {
         }
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        layer?.backgroundColor = NSColor(srgbRed: tones.fill.r, green: tones.fill.g, blue: tones.fill.b, alpha: 0.9).cgColor
+        layer?.backgroundColor = colors.surface.withAlphaComponent(0.9).cgColor
+        for bar in bars { bar.backgroundColor = colors.text.withAlphaComponent(0.14).cgColor }
         banner.contents = image
         banner.isHidden = image == nil
         bars.forEach { $0.isHidden = !isLoading }
         CATransaction.commit()
+        summary.textColor = colors.text
+        empty.textColor = colors.secondary
+        address.textColor = colors.text
+        share.paint(colors)
         summary.stringValue = result?.quickSummary ?? ""
         summary.isHidden = summary.stringValue.isEmpty
         empty.isHidden = !(finished && result == nil)
@@ -459,16 +460,16 @@ final class LinkSummaryCardView: NSView {
         para.minimumLineHeight = L.titleLineHeight
         para.maximumLineHeight = L.titleLineHeight
         title.attributedStringValue = NSAttributedString(string: small?.0 ?? "", attributes: [
-            .font: NSFont.systemFont(ofSize: 13, weight: .bold), .foregroundColor: NSColor.white, .paragraphStyle: para])
+            .font: NSFont.systemFont(ofSize: 13, weight: .bold), .foregroundColor: colors.text, .paragraphStyle: para])
         address.stringValue = small?.1 ?? ""
         title.isHidden = small == nil
         address.isHidden = small == nil
-        setRows(result?.details ?? [])
+        setRows(result?.details ?? [], colors: colors)
         share.isHidden = !finished || result == nil
         needsLayout = true
     }
 
-    private func setRows(_ details: [LinkSummaryResult.Detail]) {
+    private func setRows(_ details: [LinkSummaryResult.Detail], colors: SpaceChromeColors) {
         while rows.count > details.count {
             let r = rows.removeLast()
             r.icon.removeFromSuperview()
@@ -477,7 +478,6 @@ final class LinkSummaryCardView: NSView {
         while rows.count < details.count {
             let icon = NSImageView()
             icon.imageScaling = .scaleNone
-            icon.contentTintColor = NSColor.white.withAlphaComponent(0.4)
             let text = NSTextField(wrappingLabelWithString: "")
             text.isSelectable = false
             text.maximumNumberOfLines = 3
@@ -500,6 +500,7 @@ final class LinkSummaryCardView: NSView {
         para.minimumLineHeight = L.lineHeight
         para.maximumLineHeight = L.lineHeight
         for (row, d) in zip(rows, details) {
+            row.icon.contentTintColor = colors.secondary
             let symbol = NSImage(systemSymbolName: d.icon, accessibilityDescription: nil)
                 ?? NSImage(systemSymbolName: "circle.fill", accessibilityDescription: nil)
             row.icon.image = symbol?.withSymbolConfiguration(.init(pointSize: 13, weight: .regular))
@@ -508,7 +509,7 @@ final class LinkSummaryCardView: NSView {
                 s.append(NSAttributedString(string: d.label + ": ", attributes: [.font: NSFont.systemFont(ofSize: 13, weight: .bold)]))
             }
             s.append(NSAttributedString(string: d.info, attributes: [.font: NSFont.systemFont(ofSize: 13)]))
-            s.addAttributes([.foregroundColor: NSColor.white, .paragraphStyle: para], range: NSRange(location: 0, length: s.length))
+            s.addAttributes([.foregroundColor: colors.text, .paragraphStyle: para], range: NSRange(location: 0, length: s.length))
             row.text.attributedStringValue = s
         }
     }
@@ -582,7 +583,7 @@ final class LinkSummaryCardView: NSView {
     private func showShareMenu(_ event: NSEvent) {
         guard let link else { return }
         let menu = NSMenu()
-        menu.appearance = NSAppearance(named: .darkAqua)
+        menu.appearance = appearance
         for (title, symbol, action) in [("Copy as Text", "doc.on.doc", #selector(copyAsText)), ("Copy as Image", "photo.on.rectangle", #selector(copyAsImage))] {
             let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
             item.target = self
@@ -641,17 +642,15 @@ final class LinkSummaryCardView: NSView {
     }
 }
 
-/// Arc's share button: a 32 pt grey circle with the share glyph.
+/// Arc's share button: a 32 pt circle a step lighter than the card, with the share glyph.
 final class LinkSummaryShareButton: NSView {
     var onPress: ((NSEvent) -> Void)?
     private let glyph = CALayer()
+    private var ink = NSColor(white: 0.9, alpha: 1)
 
     override init(frame: NSRect) {
         super.init(frame: frame)
         wantsLayer = true
-        // Arc's: a grey lighter than the card, with a faint rim (2x capture).
-        layer?.backgroundColor = NSColor(white: 0.2, alpha: 1).cgColor
-        layer?.borderColor = NSColor.white.withAlphaComponent(0.12).cgColor
         layer?.borderWidth = 0.5
         layer?.shadowColor = NSColor.black.cgColor
         layer?.shadowOpacity = 0.3
@@ -663,6 +662,13 @@ final class LinkSummaryShareButton: NSView {
 
     required init?(coder: NSCoder) { fatalError() }
 
+    func paint(_ colors: SpaceChromeColors) {
+        layer?.backgroundColor = colors.raised().cgColor
+        layer?.borderColor = colors.outline.cgColor
+        ink = colors.text
+        needsLayout = true
+    }
+
     override func layout() {
         super.layout()
         CATransaction.begin()
@@ -672,7 +678,7 @@ final class LinkSummaryShareButton: NSView {
         let scale = window?.backingScaleFactor ?? 2
         glyph.contentsScale = scale
         // Drawn at the symbol's own size (13 pt, as Arc's measures), centred by the layer.
-        let ink = NSImage.SymbolConfiguration(pointSize: 13, weight: .regular).applying(.init(paletteColors: [NSColor(white: 0.9, alpha: 1)]))
+        let ink = NSImage.SymbolConfiguration(pointSize: 13, weight: .regular).applying(.init(paletteColors: [ink]))
         let symbol = NSImage(systemSymbolName: "square.and.arrow.up", accessibilityDescription: "Share")?.withSymbolConfiguration(ink)
         var rect = NSRect(origin: .zero, size: symbol?.size ?? .zero)
         glyph.contents = symbol?.cgImage(forProposedRect: &rect, context: nil, hints: [.ctm: AffineTransform(scale: scale)])

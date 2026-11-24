@@ -132,10 +132,9 @@ final class PeekControlsPanel: NSPanel {
     func place(_ frames: [NSRect], theme: SpaceTheme) {
         self.frames = frames
         layoutFrames(wide: hold != nil)
-        let tones = TooltipTones(theme: theme)
-        let fill = NSColor(srgbRed: tones.fill.r, green: tones.fill.g, blue: tones.fill.b, alpha: 1)
-        let ink = NSColor(LittleStripTones(target: theme.shown, systemDark: true).spaceName)
-        for v in views { v.paint(fill: fill, ink: ink, scale: backingScaleFactor) }
+        // The space's surface and ink, as its tooltips and toasts.
+        let colors = SpaceChromeColors(theme.palette)
+        for v in views { v.paint(fill: colors.surface, ink: colors.text, scale: backingScaleFactor) }
     }
 
     /// The panel around the buttons' frames, the Close button's as wide as its pill when `wide`.

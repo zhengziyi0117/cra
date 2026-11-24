@@ -1694,7 +1694,7 @@ final class FavoriteTileView: NSView, ArcTooltipTarget, NSDraggingSource {
     private func calendarChanged() {
         guard liveCalendarURL != nil else { return }
         refresh()
-        MeetingReminder.shared.update(tile: self, favorite: liveCalendarURL, events: calendarEvents,
+        MeetingReminder.shared.update(tile: self, colors: grid?.store.chromeColors(ofItem: itemID), favorite: liveCalendarURL, events: calendarEvents,
                                       timing: grid?.store.settings.calendarMeetingLink ?? .twoMinutes) { [weak grid] in grid?.actions.openURL($0) }
     }
 

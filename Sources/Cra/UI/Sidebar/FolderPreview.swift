@@ -91,6 +91,7 @@ final class FolderPreviewController {
         extended = false
         let panel = self.panel ?? FolderPreviewPanel()
         self.panel = panel
+        panel.preview.apply(SpaceChromeColors(list.palette))
         panel.preview.show(title: folder.title ?? "Folder", items: items)
         // Right of the sidebar (left of one on the right, #464), centred on the folder, kept 18 pt inside the window.
         let size = NSSize(width: FolderPreviewMetrics.width, height: FolderPreviewMetrics.height(rows: items.count))
@@ -117,6 +118,7 @@ final class FolderPreviewController {
     func debugOpen(_ id: UUID, row: FolderRowView, list: SpaceListView) {
         open(id, row: row, list: list)
         extended = true
+        if let panel { CraLog.note("folder preview colors: \(panel.preview.colors.readout)") }
     }
 
     func close(restoreFocus: Bool = true) {
@@ -263,13 +265,6 @@ enum FolderPreviewMetrics {
         f.dateTimeStyle = .numeric
         return f.localizedString(for: date, relativeTo: now)
     }
-
-    // Arc draws it dark whatever the space's theme: a blur that lets ~12 % of the backdrop
-    // through (23 over a dark page, 45/44/36 over a light yellow one), white text at 85 % / 58 %.
-    static let title = NSColor(white: 1, alpha: 0.83)
-    static let secondary = NSColor(white: 1, alpha: 0.55)
-    static let rowFillColor = NSColor(white: 1, alpha: 0.078)
-    static let hairline = NSColor(white: 1, alpha: 0.13)
 }
 
 /// A borderless panel that can take the search field's keys without activating anything else.
@@ -336,13 +331,13 @@ final class FolderPreviewPanel: NSPanel {
     }
 }
 
-/// The preview's content: the search field, a hairline, then the rows (scrolling past six).
+/// The preview's content: the search field, a hairline, then the rows (scrolling past six), in the
+/// space's surface and ink (SpaceChromeColors), as its tooltips and toasts.
 @MainActor
 final class FolderPreviewView: NSView, NSTextFieldDelegate {
-    private let blur = NSVisualEffectView()
     private let shade = NSView()
     private let outline = CAShapeLayer()
-    private let highlight = CAShapeLayer()
+    private(set) var colors = SpaceChromeColors(SpaceTheme.arcDefault.palette)
     private let searchIcon = NSImageView()
     private let field = NSTextField()
     private let line = NSView()
@@ -359,33 +354,22 @@ final class FolderPreviewView: NSView, NSTextFieldDelegate {
 
     init() {
         super.init(frame: NSRect(x: 0, y: 0, width: FolderPreviewMetrics.width, height: 200))
-        appearance = NSAppearance(named: .darkAqua)
         wantsLayer = true
-        blur.material = .hudWindow
-        blur.blendingMode = .behindWindow
-        blur.state = .active
-        blur.maskImage = Self.mask(radius: FolderPreviewMetrics.corner)
-        addSubview(blur)
-        // Over hudWindow (27 + 0.52 × backdrop) this leaves ≈ 19 + 0.12 × backdrop, as Arc.
         shade.wantsLayer = true
-        shade.layer?.backgroundColor = NSColor(white: 17 / 255, alpha: 0.77).cgColor
         shade.layer?.cornerRadius = FolderPreviewMetrics.corner
         shade.layer?.cornerCurve = .circular
         addSubview(shade)
         searchIcon.image = SidebarSymbols.image("magnifyingglass", size: 12, weight: .semibold)
-        searchIcon.contentTintColor = FolderPreviewMetrics.secondary
         addSubview(searchIcon)
         field.isBordered = false
         field.drawsBackground = false
         field.focusRingType = .none
         field.font = .systemFont(ofSize: 13)
-        field.textColor = FolderPreviewMetrics.title
         field.delegate = self
         field.cell?.isScrollable = true
         field.cell?.usesSingleLineMode = true
         addSubview(field)
         line.wantsLayer = true
-        line.layer?.backgroundColor = FolderPreviewMetrics.hairline.cgColor
         addSubview(line)
         scroll.drawsBackground = false
         scroll.hasVerticalScroller = true
@@ -398,39 +382,35 @@ final class FolderPreviewView: NSView, NSTextFieldDelegate {
         // Arc: "No tabs matching that search 🤔", wrapping the emoji onto a second line.
         empty.stringValue = "No tabs matching that search 🤔"
         empty.font = .systemFont(ofSize: 13)
-        empty.textColor = FolderPreviewMetrics.secondary
         empty.alignment = .center
         empty.isHidden = true
         addSubview(empty)
-        // Two half-point rims: a grey outline, a faint light line inside it.
-        for (l, c) in [(outline, NSColor(white: 0.23, alpha: 1)), (highlight, NSColor(white: 1, alpha: 0.2))] {
-            l.fillColor = nil
-            l.strokeColor = c.cgColor
-            l.lineWidth = 0.5
-            l.zPosition = 20
-            layer?.addSublayer(l)
-        }
+        outline.fillColor = nil
+        outline.lineWidth = 0.5
+        outline.zPosition = 20
+        layer?.addSublayer(outline)
+        apply(colors)
     }
 
     required init?(coder: NSCoder) { fatalError() }
 
     override var isFlipped: Bool { true }
 
-    private static func mask(radius r: CGFloat) -> NSImage {
-        let size = NSSize(width: r * 2 + 1, height: r * 2 + 1)
-        let image = NSImage(size: size, flipped: false) { rect in
-            NSColor.black.setFill()
-            NSBezierPath(roundedRect: rect, xRadius: r, yRadius: r).fill()
-            return true
-        }
-        image.capInsets = NSEdgeInsets(top: r, left: r, bottom: r, right: r)
-        image.resizingMode = .stretch
-        return image
+    /// The folder's space's colours, before each `show`.
+    func apply(_ colors: SpaceChromeColors) {
+        self.colors = colors
+        appearance = colors.appearance
+        shade.layer?.backgroundColor = colors.surface.cgColor
+        outline.strokeColor = colors.outline.cgColor
+        line.layer?.backgroundColor = colors.outline.cgColor
+        searchIcon.contentTintColor = colors.secondary
+        field.textColor = colors.text
+        empty.textColor = colors.secondary
     }
 
     func show(title: String, items: [FolderPreviewItem]) {
         field.placeholderAttributedString = NSAttributedString(string: "Search \(title)…", attributes: [
-            .foregroundColor: FolderPreviewMetrics.secondary, .font: NSFont.systemFont(ofSize: 13),
+            .foregroundColor: colors.secondary, .font: NSFont.systemFont(ofSize: 13),
         ])
         field.stringValue = ""
         self.items = items
@@ -463,7 +443,7 @@ final class FolderPreviewView: NSView, NSTextFieldDelegate {
         }
         while rows.count > shown.count { rows.removeLast().removeFromSuperview() }
         let now = Date()
-        for (i, (r, item)) in zip(rows, shown).enumerated() { r.show(item, now: now, selected: i == selected) }
+        for (i, (r, item)) in zip(rows, shown).enumerated() { r.show(item, now: now, selected: i == selected, colors: colors) }
         empty.isHidden = !shown.isEmpty
         needsLayout = true
         refreshHover()
@@ -502,13 +482,11 @@ final class FolderPreviewView: NSView, NSTextFieldDelegate {
         super.layout()
         let w = bounds.width
         let m = FolderPreviewMetrics.self
-        blur.frame = bounds
         shade.frame = bounds
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         let r = m.corner
         outline.path = CGPath(roundedRect: bounds.insetBy(dx: 0.25, dy: 0.25), cornerWidth: r - 0.25, cornerHeight: r - 0.25, transform: nil)
-        highlight.path = CGPath(roundedRect: bounds.insetBy(dx: 0.75, dy: 0.75), cornerWidth: r - 0.75, cornerHeight: r - 0.75, transform: nil)
         CATransaction.commit()
         let sh = m.searchHeight
         searchIcon.frame = NSRect(x: m.iconCenter - 8, y: (sh - 16) / 2, width: 16, height: 16)
@@ -618,6 +596,7 @@ final class FolderPreviewRowView: NSView {
     private let age = NSTextField.sidebarLabel(size: 11)
     private let badge = CALayer()
     private var itemID: UUID?
+    private var fillColor = NSColor.clear
     var isSelected = false { didSet { if isSelected != oldValue { refresh() } } }
     var isHovered = false { didSet { if isHovered != oldValue { refresh() } } }
 
@@ -630,12 +609,9 @@ final class FolderPreviewRowView: NSView {
         layer?.addSublayer(fill)
         addSubview(favicon)
         title.lineBreakMode = .byTruncatingTail
-        title.textColor = FolderPreviewMetrics.title
         addSubview(title)
-        age.textColor = FolderPreviewMetrics.secondary
         addSubview(age)
         badge.cornerRadius = 3
-        badge.backgroundColor = FolderPreviewMetrics.title.cgColor
         layer?.addSublayer(badge)
     }
 
@@ -643,11 +619,15 @@ final class FolderPreviewRowView: NSView {
 
     override var isFlipped: Bool { true }
 
-    func show(_ item: FolderPreviewItem, now: Date, selected: Bool) {
+    func show(_ item: FolderPreviewItem, now: Date, selected: Bool, colors: SpaceChromeColors) {
         itemID = item.id
-        var colors = SidebarColors()
-        colors.isDark = true
-        favicon.show(item.icon, flip: item.icon != nil && item.glyphDark == true, colors: colors)
+        title.textColor = colors.text
+        age.textColor = colors.secondary
+        badge.backgroundColor = colors.text.cgColor
+        fillColor = colors.hover
+        var glyph = SidebarColors()
+        glyph.isDark = colors.isDark
+        favicon.show(item.icon, flip: item.icon != nil && item.glyphDark == colors.isDark, colors: glyph)
         title.stringValue = item.title
         age.stringValue = FolderPreviewMetrics.age(of: item.lastVisit, now: now)
         badge.isHidden = !item.badged
@@ -657,7 +637,7 @@ final class FolderPreviewRowView: NSView {
     }
 
     private func refresh() {
-        fill.backgroundColor = (isSelected || isHovered ? FolderPreviewMetrics.rowFillColor : .clear).cgColor
+        fill.backgroundColor = (isSelected || isHovered ? fillColor : .clear).cgColor
     }
 
     override func layout() {

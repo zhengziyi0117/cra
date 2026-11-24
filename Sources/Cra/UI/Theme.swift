@@ -60,8 +60,17 @@ struct SpacePalette {
 struct SpaceChromeColors: Equatable {
     let isDark: Bool
     let gradient: [NSColor]
-    let text, outline, pill, hover: NSColor
-    var surface: NSColor { gradient[0] }
+    let text, secondary, outline, pill, hover: NSColor
+    /// Cards, menus and tips: a tint of the gradient (ChromeSurface), not its first stop.
+    let surface: NSColor
+    var appearance: NSAppearance? { NSAppearance(named: isDark ? .darkAqua : .aqua) }
+    /// `cra://debug` scenarios: light or dark, and the surface's hex without "#" (a scenario's comment).
+    var readout: String { "\(isDark ? "dark" : "light") fill=\(Color(nsColor: surface).hexString.dropFirst())" }
+
+    /// An opaque fill a step from the surface toward the text: a button or block on a card.
+    func raised(_ amount: CGFloat = 0.12) -> NSColor {
+        surface.blended(withFraction: amount, of: text.withAlphaComponent(1)) ?? surface
+    }
 
     @MainActor
     init(_ palette: SpacePalette) {
@@ -72,7 +81,11 @@ struct SpaceChromeColors: Equatable {
             let color = stop.color.withAlphaComponent(1)
             return stop.color.alphaComponent == 1 ? color : ground.blended(withFraction: stop.color.alphaComponent, of: color) ?? color
         }
+        let stops = gradient.compactMap { $0.usingColorSpace(.sRGB) }.map { RGB(Double($0.redComponent), Double($0.greenComponent), Double($0.blueComponent)) }
+        let fill = ChromeSurface.fill(stops: stops, dark: palette.isDark)
+        surface = NSColor(srgbRed: fill.r, green: fill.g, blue: fill.b, alpha: 1)
         text = NSColor(palette.textPrimary)
+        secondary = NSColor(palette.textSecondary)
         outline = text.withAlphaComponent(0.24)
         pill = NSColor(palette.pillFill)
         hover = NSColor(palette.pillHoverFill)

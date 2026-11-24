@@ -30,6 +30,8 @@ final class FavoritePreviewCard {
         /// A pinned tab's row: the card goes right of this view (the sidebar's list), level with
         /// the row's top, instead of under a favorite's tile.
         weak var beside: NSView?
+        /// The surface and ink of the tab's space; nil (scenarios) is Arc Default's.
+        var colors: SpaceChromeColors?
     }
 
     private var panel: PreviewPanel?
@@ -240,7 +242,7 @@ final class FavoritePreviewCard {
 
     private func showIfReady() {
         guard wantsShow, panel == nil, let tile, let window = tile.window, let view = content() else { return }
-        let p = PreviewPanel(content: view)
+        let p = PreviewPanel(content: view, colors: target?.colors)
         let t = window.convertToScreen(tile.convert(tile.bounds, to: nil))
         if let list = target?.beside, list.window === window {
             // A pinned tab: right of the sidebar as Arc's folder preview is, level with the row,
@@ -260,6 +262,7 @@ final class FavoritePreviewCard {
         panel = p
         let size = p.cardFrame.size
         CraLog.note("preview card shown: \(Int(size.width))x\(Int(size.height))\(target?.beside == nil ? "" : " pinned")")
+        CraLog.note("preview card colors: \(p.colors.readout)")
     }
 
     private func refreshPanel() {
@@ -367,6 +370,7 @@ extension FavoritePreviewCard.Target {
             return favicons.image(for: page) ?? FaviconKey.key(for: page).flatMap { favicons.image(forKey: FaviconKey.siteKey(of: $0)) }
         }
         t.beside = beside
+        t.colors = store.chromeColors(ofItem: id)
         return t
     }
 }
@@ -383,7 +387,8 @@ final class MeetingReminder {
     private var panel: PreviewPanel?
     private var shown: String?
 
-    func update(tile: NSView, favorite: String?, events: [CalendarPreview.Event], timing: CalendarPreview.LinkTiming, join: @escaping (String) -> Void) {
+    func update(tile: NSView, colors: SpaceChromeColors?, favorite: String?, events: [CalendarPreview.Event], timing: CalendarPreview.LinkTiming,
+                join: @escaping (String) -> Void) {
         let meeting = favorite == nil ? nil : CalendarPreview.meetingToJoin(in: events, now: Date(), timing: timing,
                                                                             dismissed: LiveCalendarClient.shared.dismissed)
         guard let meeting, let url = meeting.meetingURL, let window = tile.window, window.isVisible else {
@@ -396,7 +401,7 @@ final class MeetingReminder {
                                                dismiss: { [weak self] in self?.close(); LiveCalendarClient.shared.dismiss(meeting) }))
         if let panel, shown == key { panel.replace(view); return }
         close()
-        let p = PreviewPanel(content: view)
+        let p = PreviewPanel(content: view, colors: colors)
         let t = window.convertToScreen(tile.convert(tile.bounds, to: nil))
         p.place(cardTopLeft: NSPoint(x: window.sidebarSide.cardMinX(beside: t, gap: -4, width: p.cardFrame.width), y: t.minY + 3.5))
         window.addChildWindow(p, ordered: .above)
@@ -459,10 +464,16 @@ private final class PreviewPanel: NSPanel {
     static let margin: CGFloat = 24
     private let card = NSView()
     private var host: NSHostingView<AnyView>
+    let colors: SpaceChromeColors
 
-    init(content: AnyView) {
-        host = FirstMouseHostingView(rootView: content)
+    /// The card in its space's surface, outline and light or dark (SpaceChromeColors), as the
+    /// space's tooltips and toasts.
+    init(content: AnyView, colors: SpaceChromeColors?) {
+        let colors = colors ?? SpaceChromeColors(SpaceTheme.arcDefault.palette)
+        self.colors = colors
+        host = FirstMouseHostingView(rootView: AnyView(content.environment(\.cardTones, CardTones(colors))))
         super.init(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
+        appearance = colors.appearance
         backgroundColor = .clear
         isOpaque = false
         hasShadow = false
@@ -474,6 +485,11 @@ private final class PreviewPanel: NSPanel {
         root.wantsLayer = true
         contentView = root
         card.wantsLayer = true
+        card.layer?.backgroundColor = colors.surface.cgColor
+        card.layer?.cornerRadius = 10
+        card.layer?.cornerCurve = .continuous
+        card.layer?.borderWidth = 1
+        card.layer?.borderColor = colors.outline.cgColor
         card.layer?.shadowColor = NSColor.black.cgColor
         card.layer?.shadowOpacity = 0.35
         card.layer?.shadowRadius = 10
@@ -505,7 +521,7 @@ private final class PreviewPanel: NSPanel {
 
     func replace(_ view: AnyView) {
         let top = NSPoint(x: frame.minX, y: frame.maxY)
-        host.rootView = view
+        host.rootView = AnyView(view.environment(\.cardTones, CardTones(colors)))
         fit()
         setFrameTopLeftPoint(top)
     }
@@ -585,18 +601,52 @@ private final class TrackingView: NSView {
 
 // MARK: - Views
 
+/// Text on the card follows its light or dark; its fill and edge are the panel's (PreviewPanel).
 private enum CardStyle {
-    static let fill = Color(red: 25 / 255, green: 24 / 255, blue: 23 / 255)
-    static let edge = Color(red: 63 / 255, green: 62 / 255, blue: 60 / 255)
-    static let line = Color.white.opacity(0.08)
-    static let text = Color.white.opacity(0.9)
-    static let secondary = Color.white.opacity(0.5)
-    static let hover = Color.white.opacity(0.07)
+    static func tone(_ light: NSColor, _ dark: NSColor) -> Color {
+        Color(nsColor: NSColor(name: nil) { $0.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? dark : light })
+    }
+    static let line = Color.primary.opacity(0.08)
+    static let text = Color.primary.opacity(0.9)
+    static let body = Color.primary.opacity(0.78)
+    static let secondary = Color.primary.opacity(0.5)
+    static let hover = Color.primary.opacity(0.07)
 
     static func card<V: View>(_ v: V) -> some View {
-        v.background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(fill))
-            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(edge, lineWidth: 1))
+        v.clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+    }
+}
+
+/// Opaque fills on the card, a step from its space's surface toward the ink.
+private struct CardTones {
+    var button = Color(white: 0.14), buttonHover = Color(white: 0.2)
+    var block = Color(white: 0.22), blockHover = Color(white: 0.27)
+
+    init() {}
+
+    @MainActor init(_ colors: SpaceChromeColors) {
+        (button, buttonHover) = (Color(nsColor: colors.raised(0.1)), Color(nsColor: colors.raised(0.16)))
+        (block, blockHover) = (Color(nsColor: colors.raised(0.16)), Color(nsColor: colors.raised(0.24)))
+    }
+}
+
+private struct CardTonesKey: EnvironmentKey {
+    static let defaultValue = CardTones()
+}
+
+extension EnvironmentValues {
+    fileprivate var cardTones: CardTones {
+        get { self[CardTonesKey.self] }
+        set { self[CardTonesKey.self] = newValue }
+    }
+}
+
+@MainActor
+extension SidebarStore {
+    /// The surface and ink of the space an item is in (its display theme: the shared one under
+    /// "Use the same color for all Spaces").
+    func chromeColors(ofItem id: UUID) -> SpaceChromeColors {
+        SpaceChromeColors((spaceID(ofItem: id).flatMap(space).map(displayTheme(for:)) ?? .arcDefault).palette)
     }
 }
 
@@ -608,7 +658,7 @@ private struct SignInCard: View {
     var body: some View {
         CardStyle.card(
             VStack(spacing: 8) {
-                Text(text).font(.system(size: 13)).multilineTextAlignment(.center).foregroundStyle(.white.opacity(0.78))
+                Text(text).font(.system(size: 13)).multilineTextAlignment(.center).foregroundStyle(CardStyle.body)
                 Button("Sign In", action: signIn).buttonStyle(.borderedProminent).controlSize(.small)
             }
             .padding(.vertical, 14).padding(.horizontal, 16)
@@ -623,12 +673,14 @@ private struct RoundButton: View {
     var label: String
     let run: (CGPoint) -> Void
     @State private var hovered = false
+    @Environment(\.cardTones) private var tones
 
     var body: some View {
         GeometryReader { g in
             Circle()
-                .fill(light ? Color.white.opacity(hovered ? 0.3 : 0.24) : Color(white: hovered ? 0.2 : 0.14))
-                .overlay(Circle().strokeBorder(Color.white.opacity(light ? 0 : 0.14), lineWidth: 1))
+                .fill(light ? CardStyle.tone(NSColor(white: 0, alpha: hovered ? 0.12 : 0.08), NSColor(white: 1, alpha: hovered ? 0.3 : 0.24))
+                      : hovered ? tones.buttonHover : tones.button)
+                .overlay(Circle().strokeBorder(Color.primary.opacity(light ? 0 : 0.14), lineWidth: 1))
                 .overlay(Image(systemName: symbol).font(.system(size: 15, weight: .semibold)).foregroundStyle(CardStyle.text))
                 .shadow(color: .black.opacity(0.35), radius: 4, y: 1)
                 .contentShape(Circle())
@@ -663,7 +715,7 @@ private struct GmailPreviewView: View {
                 Text(GmailPreview.emptyText).font(.system(size: 13)).multilineTextAlignment(.center)
                 Text("🍃").font(.system(size: 14))
             }
-            .foregroundStyle(.white.opacity(0.78))
+            .foregroundStyle(CardStyle.body)
             .padding(.vertical, 15.5).padding(.horizontal, 16)
             .frame(width: 240))
     }
@@ -708,7 +760,7 @@ private struct RecentPagesPreviewView: View {
     private var empty: some View {
         CardStyle.card(
             Text(site.emptyText).font(.system(size: 13)).multilineTextAlignment(.center)
-                .foregroundStyle(.white.opacity(0.78))
+                .foregroundStyle(CardStyle.body)
                 .padding(.vertical, 15.5).padding(.horizontal, 16)
                 .frame(width: 240))
     }
@@ -826,7 +878,8 @@ struct CalendarPreviewView: View {
     var service = "Google Calendar"
     let actions: Actions
 
-    static let nowColor = Color(red: 1, green: 0.94, blue: 0.78)
+    /// Arc's cream on a dark card; amber on a light one, where cream wouldn't show.
+    static let nowColor = CardStyle.tone(NSColor(srgbRed: 1, green: 0.78, blue: 0.4, alpha: 1), NSColor(srgbRed: 1, green: 0.94, blue: 0.78, alpha: 1))
 
     var body: some View {
         if state.signedOut { signIn } else { timeline }
@@ -837,7 +890,7 @@ struct CalendarPreviewView: View {
         CardStyle.card(
             VStack(spacing: 8) {
                 Text("Sign in to \(service) to see today's meetings here.")
-                    .font(.system(size: 13)).multilineTextAlignment(.center).foregroundStyle(.white.opacity(0.78))
+                    .font(.system(size: 13)).multilineTextAlignment(.center).foregroundStyle(CardStyle.body)
                 Button("Sign In", action: actions.signIn).buttonStyle(.borderedProminent).controlSize(.small)
             }
             .padding(.vertical, 14).padding(.horizontal, 16)
@@ -921,18 +974,19 @@ private struct EventBlock: View {
     let join: (String) -> Void
     let open: (String) -> Void
     @State private var hovered = false
+    @Environment(\.cardTones) private var tones
 
     var body: some View {
         let past = event.end <= now
         HStack(alignment: compact ? .center : .top, spacing: 4) {
             if compact {
                 (Text(event.title).font(.system(size: 11, weight: .semibold))
-                    + Text("  " + CalendarPreview.timeRange(event)).font(.system(size: 10)).foregroundColor(.white.opacity(0.6)))
+                    + Text("  " + CalendarPreview.timeRange(event)).font(.system(size: 10)).foregroundColor(Color.primary.opacity(0.6)))
                     .lineLimit(1)
             } else {
                 VStack(alignment: .leading, spacing: 1) {
                     Text(event.title).font(.system(size: 11, weight: .semibold)).lineLimit(1)
-                    Text(CalendarPreview.timeRange(event)).font(.system(size: 10)).foregroundStyle(.white.opacity(0.6)).lineLimit(1)
+                    Text(CalendarPreview.timeRange(event)).font(.system(size: 10)).foregroundStyle(Color.primary.opacity(0.6)).lineLimit(1)
                 }
             }
             Spacer(minLength: 0)
@@ -950,7 +1004,8 @@ private struct EventBlock: View {
         .padding(.horizontal, 5).padding(.vertical, compact ? 0 : 3)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: compact ? .leading : .topLeading)
         // Opaque, over the hour lines and the now line.
-        .background(RoundedRectangle(cornerRadius: 5, style: .continuous).fill(Color(white: hovered ? 0.27 : 0.22)))
+        .background(RoundedRectangle(cornerRadius: 5, style: .continuous)
+            .fill(hovered ? tones.blockHover : tones.block))
         .opacity(past ? 0.55 : 1)
         .clipped()
         .contentShape(Rectangle())
