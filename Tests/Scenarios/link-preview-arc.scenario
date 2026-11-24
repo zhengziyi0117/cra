@@ -1,5 +1,5 @@
 # promise: #689
-# The link under the pointer shows at the page's bottom left as Arc's link preview: a black capsule,
+# The link under the pointer shows at the page's bottom left as Arc's link preview: a system-colored capsule,
 # 24 pt tall and fully round, with the address without its scheme or trailing slash. Holding ⇧, ⌥ or
 # ⌘ says what a click will do, "Open <the whole address> in Peek / in Split View / in a new tab" with
 # the address bright, and letting go puts the short address back. The keys come as flagsChanged
@@ -15,7 +15,7 @@ wait 2
 cra://debug?cdp=Input.dispatchMouseEvent&params={"type":"mouseMoved","x":120,"y":70}
 wait 1
 cra://debug?linkPreview=plain
-expect-log Cra link preview plain: shown=yes text=example\.com/hovered bright=- height=24 radius=12 fill=black$
+expect-log Cra link preview plain: shown=yes text=example\.com/hovered bright=- height=24 radius=12 fill=system$
 snapshot StatusBubbleView link-preview-plain
 
 # ⇧ (1<<17): Peek.

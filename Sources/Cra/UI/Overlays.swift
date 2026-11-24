@@ -23,22 +23,15 @@ final class OverlayState {
     var findActiveMatch = 0
 }
 
-/// The link under the pointer, bottom left over the page, as Arc's link preview (#689): a black
-/// capsule with the address in dim 12 pt text, and while ⇧, ⌥ or ⌘ is held what a click will do
-/// ("Open <address> in Peek"), the address bright (LinkPreview). AppKit: it changes on every link
-/// the pointer crosses.
+/// The link under the pointer, bottom left over the page. Holding ⇧, ⌥ or ⌘ also shows what
+/// a click will do ("Open <address> in Peek"), with the address emphasized (LinkPreview).
 final class StatusBubbleView: NSView {
-    /// Measured on the reporter's Arc screenshots (2x): 24 pt tall, 1 pt border at white 20 % on
-    /// black, 12 pt medium text 10 pt in from each end, dim text at 175/255 and the address white.
+    /// Arc's dimensions (#689): 24 pt tall, with 12 pt medium text 10 pt in from each end.
     static let height: CGFloat = 24
     static let padding: CGFloat = 10
     static let font = NSFont.systemFont(ofSize: 12, weight: .medium)
-    /// Opaque: the capsule is opaque black, and white at 69 % drew twice came out at 230.
-    static let dim = NSColor(srgbRed: 175.0 / 255, green: 175.0 / 255, blue: 175.0 / 255, alpha: 1)
-    static let bright = NSColor(srgbRed: 1, green: 1, blue: 1, alpha: 1)
-
     private let overlay: OverlayState
-    private let bubble = NSView()
+    private let bubble = NSBox()
     private let label = NSTextField.sidebarLabel(size: 12, weight: .medium)
     /// Settings ▸ Links' Shift-click Peek for this window's pages; false in incognito (no Peek).
     var peekOnShiftClick: () -> Bool = { true }
@@ -49,12 +42,12 @@ final class StatusBubbleView: NSView {
     init(overlay: OverlayState) {
         self.overlay = overlay
         super.init(frame: .zero)
-        bubble.wantsLayer = true
-        bubble.layer?.backgroundColor = NSColor.black.cgColor
-        bubble.layer?.cornerRadius = Self.height / 2
-        bubble.layer?.cornerCurve = .continuous
-        bubble.layer?.borderWidth = 1
-        bubble.layer?.borderColor = NSColor(white: 1, alpha: 0.2).cgColor
+        bubble.boxType = .custom
+        bubble.titlePosition = .noTitle
+        bubble.cornerRadius = Self.height / 2
+        bubble.fillColor = .controlBackgroundColor
+        bubble.borderWidth = 1
+        bubble.borderColor = .separatorColor
         label.lineBreakMode = .byTruncatingMiddle
         addSubview(bubble)
         addSubview(label)
@@ -94,7 +87,8 @@ final class StatusBubbleView: NSView {
         let paragraph = NSMutableParagraphStyle()
         paragraph.lineBreakMode = .byTruncatingMiddle
         let shown = NSMutableAttributedString()
-        for (part, color) in [(text.lead, Self.dim), (text.emphasis, Self.bright), (text.trail, Self.dim)] where !part.isEmpty {
+        let secondary: NSColor = text.emphasis.isEmpty ? .labelColor : .secondaryLabelColor
+        for (part, color) in [(text.lead, secondary), (text.emphasis, .labelColor), (text.trail, secondary)] where !part.isEmpty {
             shown.append(NSAttributedString(string: part, attributes: [.font: Self.font, .foregroundColor: color, .paragraphStyle: paragraph]))
         }
         label.attributedStringValue = shown
@@ -118,7 +112,7 @@ final class StatusBubbleView: NSView {
     func readout(_ label: String) -> String {
         let shown = !bubble.isHidden && !overlay.status.isEmpty
         return "Cra link preview \(label): shown=\(shown ? "yes" : "no") text=\(text.string) bright=\(text.emphasis.isEmpty ? "-" : text.emphasis)"
-            + " height=\(Int(bubble.frame.height)) radius=\(Int(bubble.layer?.cornerRadius ?? 0)) fill=\(bubble.layer?.backgroundColor == NSColor.black.cgColor ? "black" : "other")"
+            + " height=\(Int(bubble.frame.height)) radius=\(Int(bubble.cornerRadius)) fill=\(bubble.fillColor == .controlBackgroundColor ? "system" : "other")"
     }
 }
 

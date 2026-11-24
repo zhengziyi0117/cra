@@ -680,6 +680,8 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, BrowserM
             // alert and popover it presents, and those follow macOS as Arc's do, whatever the
             // space colour (#171).
             shell.appearance = NSAppearance(named: palette.isDark ? .darkAqua : .aqua)
+            // Chromium can host the link hint in a separate panel outside the shell.
+            statusBubble?.appearance = shell.appearance
             // The command bar follows macOS (#187); only its selected row and info badge take the
             // space's palette, also when the space changes under an open bar.
             commandBar.theme = theme.shown
