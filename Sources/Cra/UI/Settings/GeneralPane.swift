@@ -14,6 +14,32 @@ struct GeneralPane: View {
         @Bindable var store = store
         @Bindable var updater = SoftwareUpdater.shared
         SettingsCardPane {
+            SettingsHeader("Space colors")
+            SettingsFeatureCard {
+                SettingsToggleRow("Use the same color for all Spaces",
+                                  detail: "Use one palette for every Space, including new and imported Spaces. Turn this off to use each Space’s saved theme.",
+                                  isOn: $store.settings.uniformSpaceColors)
+                if store.settings.uniformSpaceColors {
+                    SettingsCardDivider()
+                    SettingsPlainRow("Palette", detail: "Follows your Mac’s light or dark appearance.") {
+                        HStack {
+                            Picker("Palette", selection: $store.settings.useCustomSpaceColor) {
+                                Text("Arc Default").tag(false)
+                                Text("Custom Color").tag(true)
+                            }
+                            .labelsHidden().fixedSize()
+                            if store.settings.useCustomSpaceColor {
+                                ColorPicker("Custom space color", selection: Binding(
+                                    get: { Color(hex: store.settings.customSpaceColor) },
+                                    set: { store.settings.customSpaceColor = $0.hexString }
+                                ), supportsOpacity: false)
+                                .labelsHidden()
+                            }
+                        }
+                    }
+                }
+            }
+            .padding(.bottom, 12)
             SettingsCard {
                 SettingsCardRow {
                     Text("Automatically update Cra").font(.system(size: 13))

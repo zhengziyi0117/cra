@@ -41,6 +41,16 @@ public enum SpaceThemeVariants {
         }
     }
 
+    /// Keep the chosen hue on both appearances, using the picked color itself on its matching side.
+    public static func uniform(color: String?, systemDark: Bool) -> SpaceTheme {
+        let appearance = systemDark ? "dark" : "light"
+        guard let color, let luminance = HexColor.luminance(color) else {
+            return colourless(intensity: 1, noise: 0, appearance: appearance)
+        }
+        let tone = (luminance < 0.45) == systemDark ? color : shade(color, lightness: systemDark ? 0.2 : 0.85)
+        return SpaceTheme(colors: [tone, tone], intensity: 1, noise: 0, appearance: appearance, accent: tone)
+    }
+
     /// Auto's half shown while macOS is light, from the pad's colours: the colours themselves (Arc
     /// saves a colour picked in Light as that colour), lifted to Arc's default light half (HSL
     /// lightness 0.9, #8389FF → #C8CAFF) when they would read as a dark theme. One colour is Arc's

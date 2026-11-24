@@ -467,7 +467,7 @@ final class ImportFlowModel {
     }
 
     var previewTheme: SpaceTheme? {
-        if uniformSpaceColors, step == .personalization || previewSpace != nil { return SidebarStore.uniformTheme }
+        if uniformSpaceColors, step == .personalization || previewSpace != nil { return store.uniformTheme }
         // Personalization previews the picked swatch, or the space's current theme.
         if step == .personalization { return chosenTheme.map { SpaceTheme.presets[$0] } ?? store.focusedSpace.theme }
         guard let plan, let i = previewSpace, i < plan.spaces.count else { return nil }

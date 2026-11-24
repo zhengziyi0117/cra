@@ -527,10 +527,15 @@ final class SidebarStore {
     func item(_ id: UUID) -> SidebarItem? { items[id] }
     func space(_ id: UUID) -> Space? { spaces[id] }
 
-    static let uniformTheme = SpaceThemeVariants.theme(key: [], intensity: 1, noise: 0, appearance: "dark")
+    var macOSIsDark = false
+
+    var uniformTheme: SpaceTheme {
+        SpaceThemeVariants.uniform(color: settings.useCustomSpaceColor ? settings.customSpaceColor : nil,
+                                   systemDark: macOSIsDark)
+    }
 
     func displayTheme(for space: Space) -> SpaceTheme {
-        settings.uniformSpaceColors && !isStandalone(space: space.id) ? Self.uniformTheme : space.theme
+        settings.uniformSpaceColors && !isStandalone(space: space.id) ? uniformTheme : space.theme
     }
 
     func focusedTheme(window id: UUID? = nil) -> SpaceTheme {

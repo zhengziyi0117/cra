@@ -73,7 +73,7 @@ struct SpaceStyleEditor: View {
             .padding(.trailing, 23)
             .padding(.top, 22)
             if store.settings.uniformSpaceColors {
-                Text("Turn off uniform colors in Settings › Tabs to see this theme.")
+                Text("Turn off uniform colors in General › Space colors to see this theme.")
                     .font(.caption)
             }
             Spacer(minLength: 0)

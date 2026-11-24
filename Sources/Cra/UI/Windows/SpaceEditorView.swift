@@ -214,6 +214,7 @@ struct SpaceEditorView: View {
 extension Color {
     var hexString: String {
         let ns = NSColor(self).usingColorSpace(.sRGB) ?? .gray
-        return String(format: "#%02X%02X%02X", Int(round(ns.redComponent * 255)), Int(round(ns.greenComponent * 255)), Int(round(ns.blueComponent * 255)))
+        func byte(_ component: CGFloat) -> Int { Int((min(1, max(0, component)) * 255).rounded()) }
+        return String(format: "#%02X%02X%02X", byte(ns.redComponent), byte(ns.greenComponent), byte(ns.blueComponent))
     }
 }

@@ -641,6 +641,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, BrowserM
             _ = TidyTabsService.shared.modelAvailable
             _ = store.spaces
             _ = SystemAppearance.shared.isDark
+            _ = store.macOSIsDark
             _ = TidyTabsService.shared.modelAvailable
         } onChange: { [weak self] in
             Task { @MainActor in
