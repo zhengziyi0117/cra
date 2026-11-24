@@ -562,6 +562,10 @@ final class SidebarStore {
         guard let preview = uniformPreview, preview.editor == editor else { return }
         uniformPreview = nil
         guard keep else { return }
+        if preview.theme == .arcDefault {
+            settings.useCustomSpaceColor = false
+            return
+        }
         var updated = settings
         updated.customSpaceTheme = preview.theme
         updated.customSpaceColor = preview.theme.key?.first ?? preview.theme.accent ?? updated.customSpaceColor

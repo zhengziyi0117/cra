@@ -45,14 +45,11 @@ private struct ThemePadView: View {
     init(theme: SpaceTheme, uniformColors: Binding<Bool>?, onChange: @escaping (SpaceTheme) -> Void) {
         self.uniformColors = uniformColors
         _theme = State(initialValue: theme)
-        // A one-colour theme stores its colour twice (a flat fill): one handle on the pad.
-        let colors = theme.solid || Set(theme.colors).count == 1 ? Array(theme.colors.prefix(1)) : theme.colors
-        let key = theme.key ?? (theme == .arcDefault ? [] : colors)
-        _pad = State(initialValue: PadState(key: key, wheel: theme.wheel ?? SpaceColorPresets.wheel(of: key),
-                                            intensity: theme.intensity, noise: theme.noise, appearance: theme.appearance))
+        let initialPad = PadState(theme: theme)
+        _pad = State(initialValue: initialPad)
         // The page with the space's colour, else the one shown last (Arc: currentThemeEditorPresetPage).
         let last = UserDefaults.standard.integer(forKey: Self.pageKey)
-        _swatchPage = State(initialValue: SpaceColorPresets.page(of: key)
+        _swatchPage = State(initialValue: SpaceColorPresets.page(of: initialPad.key)
             ?? (SpaceColorPresets.pages.indices.contains(last) ? last : 0))
         self.onChange = onChange
     }
@@ -97,12 +94,22 @@ private struct ThemePadView: View {
             .frame(height: 70)
             .padding(.leading, 17)
             .padding(.trailing, 23)
-            .padding(.top, uniformColors == nil ? 22 : 10)
-            if let uniformColors {
-                Toggle("Use the same color for all Spaces", isOn: uniformColors)
-                    .toggleStyle(.switch).controlSize(.small)
-                    .font(.system(size: 12))
+            .padding(.top, 10)
+            HStack {
+                Button("Arc Default") {
+                    theme = .arcDefault
+                    pad = PadState(theme: .arcDefault)
+                    onChange(.arcDefault)
+                }
+                .help("Restore the original Arc gradient and follow your Mac’s appearance")
+                if let uniformColors {
+                    Spacer()
+                    Toggle("Use the same color for all Spaces", isOn: uniformColors)
+                        .toggleStyle(.switch).font(.system(size: 12))
+                }
             }
+            .controlSize(.small)
+            .padding(.horizontal, 12)
             Spacer(minLength: 0)
         }
         .frame(width: 355, height: 503)
@@ -120,6 +127,7 @@ private struct ThemePadView: View {
         .environment(\.editorInk, lightCard ? .black : .white)
         // Opening the editor leaves the theme as it is; the first change rebuilds it from the pad.
         .onChange(of: pad) { _, p in
+            guard p != PadState(theme: theme) else { return }
             theme = SpaceThemeVariants.theme(key: p.key, intensity: p.intensity, noise: p.noise, appearance: p.appearance, wheel: p.wheel)
             onChange(theme)
         }
@@ -192,6 +200,16 @@ struct PadState: Equatable {
     var noise: Double
     /// "auto", "light" or "dark".
     var appearance: String
+
+    init(theme: SpaceTheme) {
+        // A flat fill stores its color twice, but has one handle on the pad.
+        let colors = theme.solid || Set(theme.colors).count == 1 ? Array(theme.colors.prefix(1)) : theme.colors
+        key = theme.key ?? (theme == .arcDefault ? [] : colors)
+        wheel = theme.wheel ?? SpaceColorPresets.wheel(of: key)
+        intensity = theme.intensity
+        noise = theme.noise
+        appearance = theme.appearance
+    }
 }
 
 /// The dotted pad, a colour wheel: a handle's angle (clockwise from three o'clock) is its Display P3
