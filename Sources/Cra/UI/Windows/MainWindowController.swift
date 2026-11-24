@@ -114,6 +114,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, BrowserM
     var isStandalone: Bool { isIncognito || isBlank }
     var focusedSpaceID: UUID { store.focusedSpaceID(window: windowID) }
     var focusedSpace: Space { store.focusedSpace(window: windowID) }
+    var focusedTheme: SpaceTheme { store.focusedTheme(window: windowID) }
     var selectedTabID: UUID? { store.selectedTabID(window: windowID) }
     /// A sidebar tab or a link dragged over the panes (#419).
     private(set) lazy var splitDrop = PageSplitDrop(owner: self)
@@ -165,7 +166,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, BrowserM
 
         let store = app.store
         SidebarGlassSetting.shared.isOn = store.settings.translucentSidebar
-        let palette = focusedSpace.theme.palette
+        let palette = focusedTheme.palette
         let statusBubble = StatusBubbleView(overlay: overlay)
         self.statusBubble = statusBubble
         shell = ShellView(frame: window.contentView!.bounds,
@@ -655,7 +656,8 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, BrowserM
         let space = focusedSpace
         // Every palette reads the setting; the store's change reaches the windows here (SidebarGlassSetting).
         if SidebarGlassSetting.shared.isOn != store.settings.translucentSidebar { SidebarGlassSetting.shared.isOn = store.settings.translucentSidebar }
-        let palette = space.theme.palette
+        let theme = store.displayTheme(for: space)
+        let palette = theme.palette
         // Its extensions belong to the space's profile.
         if siteControlCenter.isShown, siteControlCenterSpaceID != space.id { siteControlCenter.close() }
         // refresh runs on every store change (each page title, each window move). A new root
@@ -663,14 +665,14 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, BrowserM
         // every view, so all of these follow the theme only when it changes. What the root
         // views show beyond the palette they observe themselves.
         // The material too: View ▸ Appearance picks it for every space without changing the theme (#700).
-        if shownTheme != space.theme.shown || shownGlass != palette.glass || shownLightMaterial != palette.lightMaterial {
-            shownTheme = space.theme.shown
+        if shownTheme != theme.shown || shownGlass != palette.glass || shownLightMaterial != palette.lightMaterial {
+            shownTheme = theme.shown
             shownGlass = palette.glass
             shownLightMaterial = palette.lightMaterial
             // A swipe in the floating sidebar changes space under it (issue #12).
             floatingSidebar?.refreshBackdrop()
             shell.isDarkTheme = palette.isDark
-            shell.cardGround = (space.theme.appearance, CardVeil.lightness(of: space.theme.shown.colors))
+            shell.cardGround = (theme.appearance, CardVeil.lightness(of: theme.shown.colors))
             // The space's light or dark goes to the window's content (sidebar, toolbar, pages'
             // frame), not to the window: AppKit hands a window's appearance to every menu, sheet,
             // alert and popover it presents, and those follow macOS as Arc's do, whatever the
@@ -678,7 +680,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, BrowserM
             shell.appearance = NSAppearance(named: palette.isDark ? .darkAqua : .aqua)
             // The command bar follows macOS (#187); only its selected row and info badge take the
             // space's palette, also when the space changes under an open bar.
-            commandBar.theme = space.theme.shown
+            commandBar.theme = theme.shown
             // Vibrant themes see through to the desktop like Arc; others are opaque.
             shell.vibrancy.isHidden = !palette.vibrant
             shell.vibrancyLift.isHidden = !palette.vibrant
@@ -688,7 +690,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, BrowserM
             window?.backgroundColor = palette.vibrant ? .clear : NSColor(palette.gradientColors.first ?? .gray)
         }
 
-        let ring = NSColor(space.theme.shadedDark)
+        let ring = NSColor(theme.shadedDark)
         if shell.focusRingColor != ring { shell.focusRingColor = ring }
         browsers.pruneMissingTabs()
         let selected = selectedTabID
@@ -1116,7 +1118,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, BrowserM
                        CraLog.note("page \(self?.slowResponseLogHost(id) ?? "") stopped from the notice")
                        self?.browsers.runtime(for: id)?.browser.stopLoading()
                    },
-                   page: page, in: window, theme: focusedSpace.theme,
+                   page: page, in: window, theme: focusedTheme,
                    onClose: { [weak self] in
                        // ✕: the page goes on waiting, without the notice.
                        self?.slowResponses[id]?.close()
@@ -1179,7 +1181,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, BrowserM
         slowResponseToastTab = nil
         toast.show(ProtectedVideoPrompt.text, action: prompt.choices.first.map(answer),
                    second: prompt.choices.count > 1 ? answer(prompt.choices[1]) : nil,
-                   page: shell.webContainer.convert(shell.webContainer.bounds, to: nil), in: window, theme: focusedSpace.theme,
+                   page: shell.webContainer.convert(shell.webContainer.bounds, to: nil), in: window, theme: focusedTheme,
                    onClose: { [weak self] in self?.answerProtectedVideo(wanted.tab, nil) })
         protectedVideoPromptUp = true
         CraLog.note("protected video prompt shown: \(toast.debugButtons)")
@@ -1416,7 +1418,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, BrowserM
         previews.linkHoverChanged(.init(
             context: .init(request: request, page: page, windowID: windowID, tabID: tabID,
                            runtimeID: ObjectIdentifier(rt), navigationRevision: revision), window: window,
-            theme: store.spaces[space]?.theme ?? self.focusedSpace.theme,
+            theme: store.displayTheme(for: store.spaces[space] ?? self.focusedSpace),
             shiftHeld: NSEvent.modifierFlags.contains(.shift),
             favicon: app.favicons.image(for: url.absoluteString)
                 ?? FaviconKey.key(for: url.absoluteString).flatMap { app.favicons.image(forKey: FaviconKey.siteKey(of: $0)) },
@@ -3100,7 +3102,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, BrowserM
                     let key = FaviconKey.key(for: row.url)
                     return BackForwardMenuItem(title: row.title, icon: favicons.image(forKey: key), flip: favicons.glyphIsDark(forKey: key) == true)
                 }
-                let tones = ArcMenuTones(theme: self.store.focusedSpace(window: self.windowID).theme.shown)
+                let tones = ArcMenuTones(theme: self.focusedTheme.shown)
                 func ink(_ c: RGB) -> NSColor { NSColor(srgbRed: c.r, green: c.g, blue: c.b, alpha: 1) }
                 let colors = SidebarCreationMenuColors(fill: ink(tones.fill), hover: ink(tones.hover), separator: ink(tones.separator),
                                                        shortcut: ink(tones.shortcut), disabled: ink(tones.disabled))
@@ -3498,7 +3500,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, BrowserM
     private func installFloatingSidebar() {
         guard let window, floatingSidebar == nil else { return }
         let f = FloatingSidebarController(shell: shell, window: window, palette: { [weak self] in
-            self?.focusedSpace.theme.palette ?? SpaceTheme.presets[0].palette
+            self?.focusedTheme.palette ?? SpaceTheme.presets[0].palette
         })
         // Also over a page in full screen, where the sidebar is out of sight (#315).
         f.sidebarHidden = { [weak self] in
@@ -4293,7 +4295,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, BrowserM
         // Arc's panel stands against the sidebar's edge with the row about half way down it.
         let y = min(max(row.midY - size.height / 2, window.frame.minY), window.frame.maxY - size.height)
         let panel = StyleEditorPanel(contentRect: NSRect(x: row.maxX.rounded() + 2, y: y.rounded(), width: size.width, height: size.height)) {}
-        let host = NSHostingView(rootView: editor.shadow(color: .black.opacity(0.3), radius: 10, y: 4)
+        let host = NSHostingView(rootView: editor.environment(store).shadow(color: .black.opacity(0.3), radius: 10, y: 4)
             .padding(.top, 12).padding(.horizontal, 13.5).padding(.bottom, 19))
         host.sizingOptions = []
         panel.contentView = host
@@ -4635,7 +4637,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, BrowserM
 
     /// `cra://debug?switcher` (`=all`: ⌃⌥Tab's, #467).
     func debugTabSwitcher(allSpaces: Bool = false, held: NSEvent.ModifierFlags = []) {
-        let theme = focusedSpace.theme
+        let theme = focusedTheme
         let dark = NSApp.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
         tabSwitcher.isDark = dark
         tabSwitcher.highlight = theme.switcherHighlight(dark: dark)
@@ -5068,7 +5070,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, BrowserM
         zapBrowser = b
         zapCard = card
         b.executeJavaScript(BoostZap.script)
-        let colors = ZapShelfColors.current(theme: focusedSpace.theme, toolbarHex: card.toolbarColor)
+        let colors = ZapShelfColors.current(theme: focusedTheme, toolbarHex: card.toolbarColor)
         card.bottomBar = ZapShelfHostingView(rootView: ZapShelfView(model: model, colors: colors))
         CraLog.note("zap on: shelf under the page")
         let t = Timer(timeInterval: 0.15, repeats: true) { [weak self] _ in MainActor.assumeIsolated { self?.pollZap() } }
@@ -5195,7 +5197,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, BrowserM
     /// ⌃Tab / ⌃⇧Tab: Arc's switcher over the space's recent tabs. ⌃⌥Tab (`allSpaces`, #467, not
     /// in Arc): the same cards over every space's, each naming its space.
     func cycleRecentTabs(_ delta: Int, event: NSEvent?, allSpaces: Bool = false) {
-        let theme = focusedSpace.theme
+        let theme = focusedTheme
         let dark = NSApp.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
         if !tabSwitcher.isOpen {
             tabSwitcher.isDark = dark
@@ -5277,7 +5279,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, BrowserM
             CommandBarDeveloperInput(glyphCenterX: $0.glyphCenterX - $0.bar.minX, textX: $0.textX - $0.bar.minX, glyph: $0.glyph,
                                      glyphTint: $0.tint, topRadius: $0.cardRadius)
         } : nil
-        commandBar.theme = focusedSpace.theme.shown
+        commandBar.theme = focusedTheme.shown
         commandBar.focusedSpaceID = focusedSpaceID
         commandBar.open(mode: effectiveMode, prefill: prefill)
         // Arc draws the New Tab row as the active one while the bar makes a new tab; the
@@ -5604,7 +5606,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, BrowserM
             self.protectedVideoPromptUp = false
             self.toast.show("\(service) plays with Safari's engine",
                             action: ShinyToast.Action(title: "Why?") { [weak self] in self?.showSiteControlsFromTheirButton() },
-                            page: page, in: window, theme: self.focusedSpace.theme, onClose: told)
+                            page: page, in: window, theme: self.focusedTheme, onClose: told)
         }
     }
 
@@ -5618,7 +5620,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, BrowserM
         let page = shell.webContainer.convert(shell.webContainer.bounds, to: nil)
         slowResponseToastTab = nil
         protectedVideoPromptUp = false
-        toast.show(text, keyCap: keyCap, action: action, page: page, in: window, theme: focusedSpace.theme, onTap: onTap)
+        toast.show(text, keyCap: keyCap, action: action, page: page, in: window, theme: focusedTheme, onTap: onTap)
     }
 
     /// An MCP agent's pill at the bottom of the page (AgentPill): its face, what it does, Take Over (⌘.).
@@ -5669,7 +5671,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, BrowserM
         let page = shell.webContainer.convert(shell.webContainer.bounds, to: nil)
         protectedVideoPromptUp = false
         toast.show(notice.title, action: ShinyToast.Action(title: notice.button) { SoftwareUpdater.shared.act(on: notice) },
-                   page: page, in: window, theme: focusedSpace.theme, onClose: {})
+                   page: page, in: window, theme: focusedTheme, onClose: {})
     }
 
     /// A Peek's page loads in the tab the Peek came from (⌘-click on Expand, GitHub #380): the tab
@@ -5818,7 +5820,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, BrowserM
         }
         shell.findHost.isHidden = enabled
         askOnPage.view.isHidden = !enabled
-        let theme = focusedSpace.theme.shown
+        let theme = focusedTheme.shown
         // Not theme.isDark: the card follows macOS, so it makes a question for each appearance (#408).
         askOnPage.setTone(themeHex: theme.accent ?? theme.colors.first ?? "#DDDDDD")
         if enabled { browsers.refreshAskOnPageDocument() }
@@ -5890,7 +5892,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, BrowserM
             // A new space has nothing to draw on yet; the sheet's own preview shows it.
             if let sid = space?.id { store.previewTheme(theme, forSpace: sid) }
         })
-        panel.contentView = NSHostingView(rootView: view)
+        panel.contentView = NSHostingView(rootView: view.environment(store))
         spaceEditor = panel
         CraLog.note("space editor opens: \(space == nil ? "a new space" : "an existing space")")
         window.beginSheet(panel) { [weak self] _ in

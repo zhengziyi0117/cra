@@ -52,7 +52,7 @@ extension MainWindowController {
         let panel = StyleEditorPanel(contentRect: NSRect(x: x, y: window.frame.maxY - size.height, width: size.width, height: size.height)) {
             store.endThemePreview(forSpace: id, keep: true)
         }
-        let host = NSHostingView(rootView: editor.shadow(color: .black.opacity(0.3), radius: 10, y: 4)
+        let host = NSHostingView(rootView: editor.environment(store).shadow(color: .black.opacity(0.3), radius: 10, y: 4)
             .padding(.top, 12).padding(.horizontal, 13.5).padding(.bottom, 19))
         host.sizingOptions = []
         panel.contentView = host
@@ -74,7 +74,7 @@ extension MainWindowController {
             NewProfileDialog(spaces: profileSpaces, ticked: ticked, onCreate: { [weak self] name, ids in
                 self?.createProfile(name: name, forSpaces: ids)
                 close()
-            }, onCancel: close)
+            }, onCancel: close).environment(store)
         }
     }
 
@@ -89,7 +89,7 @@ extension MainWindowController {
             }, onCreate: { [weak self] name, ids in
                 self?.createProfile(name: name, forSpaces: ids)
                 close()
-            }, onCancel: close)
+            }, onCancel: close).environment(store)
         }
     }
 

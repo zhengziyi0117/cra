@@ -508,7 +508,8 @@ final class SidebarStore {
 
     func themeDataCSS(item id: UUID, systemDark: Bool) -> String? {
         guard settings.shareThemeWithWebsites, !isIncognito(item: id),
-              let theme = spaceID(ofItem: id).flatMap({ spaces[$0]?.theme }) else { return nil }
+              let space = spaceID(ofItem: id).flatMap({ spaces[$0] }) else { return nil }
+        let theme = displayTheme(for: space)
         let dark = settings.websiteAppearance == .dark || (settings.websiteAppearance == .automatic && systemDark)
         return ":root { " + ArcThemeData.declarations(palette: ArcThemeData.palette(theme: theme, dark: dark), gradient: theme.colors) + " }"
     }
@@ -525,6 +526,16 @@ final class SidebarStore {
 
     func item(_ id: UUID) -> SidebarItem? { items[id] }
     func space(_ id: UUID) -> Space? { spaces[id] }
+
+    static let uniformTheme = SpaceThemeVariants.theme(key: [], intensity: 1, noise: 0, appearance: "dark")
+
+    func displayTheme(for space: Space) -> SpaceTheme {
+        settings.uniformSpaceColors && !isStandalone(space: space.id) ? Self.uniformTheme : space.theme
+    }
+
+    func focusedTheme(window id: UUID? = nil) -> SpaceTheme {
+        displayTheme(for: focusedSpace(window: id))
+    }
 
     func children(of id: UUID) -> [SidebarItem] {
         (items[id]?.children ?? []).compactMap { items[$0] }

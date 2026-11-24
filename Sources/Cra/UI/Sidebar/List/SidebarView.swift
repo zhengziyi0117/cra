@@ -86,7 +86,7 @@ final class SidebarView: NSView {
         self.ui = ui
         self.actions = actions
         self.favicons = favicons
-        palette = store.focusedSpace(window: ui.windowID).theme.palette
+        palette = store.focusedTheme(window: ui.windowID).palette
         topBar = SidebarTopBarView(store: store, ui: ui, actions: actions)
         pager = SpacePagerView(store: store, ui: ui, actions: actions, favicons: favicons)
         trayHost = DownloadsTrayView(ui: ui)
@@ -171,27 +171,27 @@ final class SidebarView: NSView {
 
     private func observe() {
         var bannerHeight: CGFloat = 0
-        let (space, library, trayOpen, recentCount) = withObservationTracking {
+        let (space, theme, library, trayOpen, recentCount) = withObservationTracking {
             let space = store.focusedSpace(window: ui.windowID)
             _ = SystemAppearance.shared.isDark
             bannerHeight = UpdateBannerView.preferredHeight
-            return (space, ui.libraryPage, ui.downloadsListOpen, DownloadHistory.shared.recent.count)
+            return (space, store.displayTheme(for: space), ui.libraryPage, ui.downloadsListOpen, DownloadHistory.shared.recent.count)
         } onChange: { [weak self] in
             Task { @MainActor in self?.observe() }
         }
-        let paletteChanged = lastSpaceID == nil || space.theme.shown != shownTheme || space.id != lastSpaceID
-        shownTheme = space.theme.shown
+        let paletteChanged = lastSpaceID == nil || theme.shown != shownTheme || space.id != lastSpaceID
+        shownTheme = theme.shown
         if space.id != lastSpaceID {
             // A drag that hovered another space's icon carries the picks there; its end clears them.
             if lastSpaceID != nil, ui.draggingID == nil { ui.clearPicks() }
             lastSpaceID = space.id
         }
-        if paletteChanged || palette.isDark != space.theme.palette.isDark {
-            palette = space.theme.palette
+        if paletteChanged || palette.isDark != theme.palette.isDark {
+            palette = theme.palette
             let colors = SidebarColors(palette)
             trayHost.colors = colors
             bannerHost.colors = colors
-            let shown = space.theme.shown
+            let shown = theme.shown
             bannerHost.themeColor = shown.accent ?? shown.colors.first
             player.setTheme(shown.accent ?? shown.colors.first, dark: palette.isDark)
             libraryHost?.palette = palette
@@ -616,7 +616,7 @@ final class SidebarTopBarView: NSView {
         let wasCompact = compact
         let wasHeight = preferredHeight
         compact = !store.settings.showToolbar
-        colors = SidebarColors(store.focusedSpace(window: ui.windowID).theme.palette)
+        colors = SidebarColors(store.focusedTheme(window: ui.windowID).palette)
         let tab = store.selectedTab(window: ui.windowID)
         devNav = !compact && (tab?.tab.map { store.settings.isDeveloperMode(url: $0.url) } ?? false)
         let active = ui.appActive
@@ -778,7 +778,7 @@ final class SidebarTopBarView: NSView {
         let panel = SidebarMorePanel(items: [
             .init(symbol: "arrow.clockwise", title: "Reload", keys: keys("reload"), enabled: hasTab) { [weak self] in self?.actions.reload() },
             .init(symbol: store.settings.sidebarSide.toggleSymbol, title: "Toggle Sidebar", keys: keys("toggleSidebar"), enabled: true) { [weak self] in self?.actions.toggleSidebar() },
-        ], ink: store.focusedSpace(window: ui.windowID).theme.shadedDark)
+        ], ink: store.focusedTheme(window: ui.windowID).shadedDark)
         panel.onClose = { [weak self] in
             self?.morePanel = nil
             self?.apply()
@@ -1280,7 +1280,7 @@ final class SpaceDockView: NSView {
             SidebarCreationMenuItem(title: title, symbol: symbol, shortcut: KeyBindingRegistry.shared.action(id)?.primary?.display ?? "",
                                     enabled: enabled) { [actions] in actions.performAction(id) }
         }
-        let tones = ArcMenuTones(theme: store.focusedSpace(window: ui.windowID).theme.shown)
+        let tones = ArcMenuTones(theme: store.focusedTheme(window: ui.windowID).shown)
         func ink(_ c: RGB) -> NSColor { NSColor(srgbRed: c.r, green: c.g, blue: c.b, alpha: 1) }
         let colors = SidebarCreationMenuColors(fill: ink(tones.fill), hover: ink(tones.hover), separator: ink(tones.separator),
                                                shortcut: ink(tones.shortcut), disabled: ink(tones.disabled))
@@ -1295,7 +1295,7 @@ final class SpaceDockView: NSView {
         var spaces: [Space] = []
         var pending: SpaceCreationDraft?
         withObservationTracking {
-            colors = SidebarColors(store.focusedSpace(window: ui.windowID).theme.palette)
+            colors = SidebarColors(store.focusedTheme(window: ui.windowID).palette)
             incognito = store.window(ui.windowID).isIncognito
             let f = store.focusedSpaceID(window: ui.windowID)
             focused = f

@@ -335,7 +335,7 @@ final class SpaceBackgroundView: NSView {
     override func hitTest(_ point: NSPoint) -> NSView? { nil }
 
     private func observe() {
-        let palette = withObservationTracking { store.focusedSpace(window: ui.windowID).theme.palette } onChange: { [weak self] in
+        let palette = withObservationTracking { store.focusedTheme(window: ui.windowID).palette } onChange: { [weak self] in
             Task { @MainActor in self?.observe() }
         }
         noise.apply(palette)
@@ -426,7 +426,7 @@ final class PagedGradientView: NSView {
 
     private func observe() {
         withObservationTracking {
-            _ = store.pagedSpaces(window: ui.windowID).map(\.theme)
+            _ = store.pagedSpaces(window: ui.windowID).map(store.displayTheme(for:))
             _ = store.focusedSpaceID(window: ui.windowID)
             _ = CraTuning.shared.gradientAlphaScale
             _ = SidebarGlassSetting.shared.isOn
@@ -463,7 +463,7 @@ final class PagedGradientView: NSView {
         guard !spaces.isEmpty else { return }
         let ids = spaces.map(\.id)
         let index = ids.firstIndex(of: store.focusedSpaceID(window: ui.windowID)) ?? 0
-        let palettes = spaces.map(\.theme.palette)
+        let palettes = spaces.map { store.displayTheme(for: $0).palette }
         let swipe = ui.spaceSwipe
         let target = Self.colors(palettes, at: Double(index) + Double(swipe))
         let moved = placed.map { $0.index != index || $0.swipe != 0 } ?? false

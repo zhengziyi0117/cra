@@ -160,7 +160,7 @@ final class SpaceListView: NSView, NSDraggingSource {
         self.ui = ui
         self.actions = actions
         self.favicons = favicons
-        palette = (store.space(spaceID) ?? store.focusedSpace(window: ui.windowID)).theme.palette
+        palette = store.displayTheme(for: store.space(spaceID) ?? store.focusedSpace(window: ui.windowID)).palette
         super.init(frame: .zero)
         wantsLayer = true
         scrollView.drawsBackground = false
@@ -300,7 +300,7 @@ final class SpaceListView: NSView, NSDraggingSource {
 
     private func build() -> Built? {
         guard let space = store.space(spaceID) else { return nil }
-        let palette = space.theme.palette
+        let palette = store.displayTheme(for: space).palette
         let window = ui.windowID
         let drop = ui.listDrop
         let picks = ui.multiSelection

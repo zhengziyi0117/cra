@@ -956,7 +956,7 @@ final class LittleWindowController: NSWindowController, NSWindowDelegate, @preco
         }
         let controls = PeekControlsPanel(buttons: buttons)
         self.controls = controls
-        controls.place(parent.peekButtonFrames(), theme: parent.focusedSpace.theme)
+        controls.place(parent.peekButtonFrames(), theme: parent.focusedTheme)
         controls.alphaValue = 0
         window.alphaValue = 0
         window.setFrame(parent.peekFrame(), display: false)
@@ -1093,7 +1093,7 @@ final class LittleWindowController: NSWindowController, NSWindowDelegate, @preco
         guard let window, let parent = peekParent, let pw = parent.window, !closingPeek else { return }
         dim?.reposition(covering: parent.peekDismissArea(), of: pw)
         window.setFrame(parent.peekFrame(), display: true)
-        controls?.place(parent.peekButtonFrames(), theme: parent.focusedSpace.theme)
+        controls?.place(parent.peekButtonFrames(), theme: parent.focusedTheme)
     }
 
     /// Arc closes a Peek the way it opened, backwards: into the link it came from, where the page
@@ -1252,7 +1252,7 @@ final class LittleWindowController: NSWindowController, NSWindowDelegate, @preco
         let prefill = hasPage ? currentURL : nil
         // Suggestions come from the normal profile even when an incognito window was in front.
         app.useNormalWindow()
-        commandBar.theme = store.focusedSpace.theme.shown
+        commandBar.theme = store.focusedTheme().shown
         commandBar.focusedSpaceID = store.focusedSpaceID
         commandBar.spaceShown = isPeek ? nil : state.targetSpaceID
         commandBar.window = isPeek ? .peek : .littleWindow
@@ -3089,8 +3089,9 @@ final class LittleToolbarView: NSView {
     override var isFlipped: Bool { true }
 
     private func observe() {
-        let (url, hover, popupOpen, space, spaces, profile, waiting, dark) = withObservationTracking {
-            (state.url, state.hover, state.popupOpen, store.space(state.targetSpaceID) ?? store.focusedSpace, store.spaceOrder.count,
+        let (url, hover, popupOpen, space, theme, spaces, profile, waiting, dark) = withObservationTracking {
+            let space = store.space(state.targetSpaceID) ?? store.focusedSpace
+            return (state.url, state.hover, state.popupOpen, space, store.displayTheme(for: space), store.spaceOrder.count,
              // Arc's shouldShowProfileIndicators: only once there is a profile besides Default.
              store.profiles.isEmpty ? nil : store.profileName(state.profileID), state.awaitsFirstResponse, SystemAppearance.shared.macOSIsDark)
         } onChange: { [weak self] in
@@ -3116,7 +3117,7 @@ final class LittleToolbarView: NSView {
         profileChip.isHidden = profile == nil
         profileChip.name = profile ?? ""
         profileChip.hovered = hover == .profile
-        let tones = LittleStripTones(target: space.theme, systemDark: dark)
+        let tones = LittleStripTones(target: theme, systemDark: dark)
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         gradient.colors = [NSColor(tones.left).cgColor, NSColor(tones.right).cgColor]
@@ -3421,7 +3422,8 @@ final class LittleSpacesPopup: NSView, NSTextFieldDelegate {
             tile.wantsLayer = true
             tile.layer?.cornerRadius = LittleMoveMenu.tileRadius
             tile.layer?.cornerCurve = .continuous
-            tile.layer?.backgroundColor = NSColor(hex: s.theme.shown.accent ?? s.theme.shown.colors.first ?? "#888888").cgColor
+            let theme = store.displayTheme(for: s).shown
+            tile.layer?.backgroundColor = NSColor(hex: theme.accent ?? theme.colors.first ?? "#888888").cgColor
             // Arc 1.172.1: a 12 pt emoji, centred (a 🍎 12.5 pt wide in the 26 pt tile).
             let emoji = NSTextField.sidebarLabel(size: 12)
             emoji.stringValue = s.emoji

@@ -211,7 +211,7 @@ final class SpaceHeaderView: NSView, NSTextFieldDelegate {
             symbol.image = SpaceIconImage.glyph(for: space, points: 13)
             title.stringValue = space.title
             blank = space.standaloneWindowID != nil
-            colors = SidebarColors(space.theme.palette)
+            colors = SidebarColors(store.displayTheme(for: space).palette)
             collapsed = store.isPinnedCollapsed(spaceID)
             hide = store.hidesSpaceHeader(spaceID)
             _ = ui.renamingSpaceID
@@ -689,7 +689,8 @@ final class FavoritesGridView: NSView {
         var playing: [UUID: Playing] = [:]
         withObservationTracking {
             guard let space = store.space(spaceID) else { return }
-            palette = space.theme.palette
+            let spacePalette = store.displayTheme(for: space).palette
+            palette = spacePalette
             // Arc (4 Nov): with the URL field in the sidebar, the pins leave it for this grid.
             if !store.settings.showToolbar, !store.isIncognito(space: spaceID) {
                 let ext = ExtensionStore.shared
@@ -728,7 +729,7 @@ final class FavoritesGridView: NSView {
                 let open = panes.first { store.isSelected($0.id, inSpace: spaceID, window: ui.windowID) }?.id
                 let peek = panes.lazy.compactMap { self.ui.peekBadges[$0.id] }.first.map { badge -> FavoriteTileModel.Peek in
                     let icon = favicons.image(forKey: badge.iconKey)
-                    return .init(icon: icon, flip: icon != nil && favicons.glyphIsDark(forKey: badge.iconKey) == space.theme.palette.isDark)
+                    return .init(icon: icon, flip: icon != nil && favicons.glyphIsDark(forKey: badge.iconKey) == spacePalette.isDark)
                 }
                 let title = item.isSplit && item.title == nil ? panes.map(\.displayTitle).joined(separator: " | ") : item.displayTitle
                 models.append((item.id, FavoriteTileModel(title: title, cells: cells, vertical: item.split?.orientation == .vertical,

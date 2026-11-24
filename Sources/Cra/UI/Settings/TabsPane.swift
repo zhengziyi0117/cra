@@ -36,6 +36,10 @@ struct TabsPane: View {
             // Settings that change how Cra looks carry a picture of the change.
             SettingsHeader("Sidebar").padding(.top, 20)
             SettingsFeatureCard {
+                SettingsToggleRow("Use the same color for all Spaces",
+                                  detail: "Show Arc’s default dark theme in every Space, including new and imported Spaces. Turn this off to see each Space’s own colors.",
+                                  isOn: $store.settings.uniformSpaceColors)
+                SettingsCardDivider()
                 SettingsSwitchRow("New tabs at the top",
                                   detail: "A new tab goes above your other tabs instead of below them.",
                                   isOn: $store.settings.newTabsAtTop) { SettingsArt.newTabsAtTop }

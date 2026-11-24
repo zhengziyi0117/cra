@@ -172,7 +172,7 @@ final class PaneToolbarView: NSView {
 
     private func build() -> Model {
         var m = Model()
-        let palette = store.focusedSpace(window: ui.windowID).theme.palette
+        let palette = store.focusedTheme(window: ui.windowID).palette
         let item = paneTabID.flatMap { store.item($0) } ?? (paneTabID == nil ? store.selectedTab(window: ui.windowID) : nil)
         m.inSplit = paneTabID != nil && ui.splitPaneIDs.count > 1
         m.focusedPane = paneTabID == nil || store.selectedTabID(window: ui.windowID) == paneTabID
@@ -240,7 +240,7 @@ final class PaneToolbarView: NSView {
             // Arc's developer bar (GitHub #42): the space's colour under faint stripes, whatever the
             // page's theme-color, with near-white ink (Arc's foregroundPrimary, JYSK 236/237/254),
             // a white 10% rule along the bottom and a white 8% hover.
-            let theme = store.focusedSpace(window: ui.windowID).theme
+            let theme = store.focusedTheme(window: ui.windowID)
             m.fill = theme.developerBarColor
             let ink = NSColor.white.blended(withFraction: 0.07, of: m.fill) ?? .white
             m.fg = ink

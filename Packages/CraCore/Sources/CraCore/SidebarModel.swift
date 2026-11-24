@@ -762,6 +762,8 @@ public struct AppSettings: Codable, Equatable {
     /// Ideas #366, not in Arc: the sidebar and the window's ground are a thin glass over what is behind
     /// the window, and the floating sidebar over the page it covers (SidebarGlass). Off by default.
     public var translucentSidebar: Bool = false
+    /// Show Arc’s default dark palette while keeping each space’s saved theme.
+    public var uniformSpaceColors: Bool = true
     /// GitHub #464, not in Arc: the sidebar docks on the window's right (SidebarSide). Left is Arc's.
     public var sidebarSide: SidebarSide = .left
     /// GitHub #91, Settings ▸ Performance: Cra records its own performance on this Mac (stalls,
@@ -1082,6 +1084,7 @@ extension AppSettings {
         edgeToEdgeRoundedCorners = try c.decodeIfPresent(Bool.self, forKey: .edgeToEdgeRoundedCorners) ?? false
         pageMargin = (try? c.decodeIfPresent(Double.self, forKey: .pageMargin)) ?? PageMargin.arc
         translucentSidebar = try c.decodeIfPresent(Bool.self, forKey: .translucentSidebar) ?? false
+        uniformSpaceColors = try c.decodeIfPresent(Bool.self, forKey: .uniformSpaceColors) ?? true
         sidebarSide = (try? c.decodeIfPresent(SidebarSide.self, forKey: .sidebarSide)) ?? .left
         perfRecording = try c.decodeIfPresent(Bool.self, forKey: .perfRecording) ?? Self.perfRecordingDefault
         perfHidesSiteNames = try c.decodeIfPresent(Bool.self, forKey: .perfHidesSiteNames) ?? false

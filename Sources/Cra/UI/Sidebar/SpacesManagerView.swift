@@ -165,7 +165,7 @@ private final class SpaceManagerCard: NSView {
         self.store = store
         self.ui = ui
         self.actions = actions
-        let palette = store.space(spaceID)?.theme.palette ?? SpaceTheme.presets[0].palette
+        let palette = store.space(spaceID).map { store.displayTheme(for: $0).palette } ?? SpaceTheme.presets[0].palette
         background = PaletteBackgroundView(palette: palette)
         list = SpaceListView(spaceID: spaceID, store: store, ui: ui, actions: actions, favicons: favicons)
         list.showsNewTab = false
@@ -191,8 +191,9 @@ private final class SpaceManagerCard: NSView {
             emoji.stringValue = s.emoji
             symbol.image = SpaceIconImage.glyph(for: s, points: 13)
             title.stringValue = s.title
-            background.palette = s.theme.palette
-            colors = SidebarColors(s.theme.palette)
+            let palette = store.displayTheme(for: s).palette
+            background.palette = palette
+            colors = SidebarColors(palette)
         } onChange: { [weak self] in
             Task { @MainActor in self?.sync() }
         }

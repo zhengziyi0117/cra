@@ -54,6 +54,7 @@ struct ProfileSpacesStep: View {
 
 /// One space in the step above: the theme as a little window, the circle, the name.
 private struct SpaceChoice: View {
+    @Environment(SidebarStore.self) private var store
     let space: Space
     let on: Bool
     let toggle: () -> Void
@@ -62,8 +63,9 @@ private struct SpaceChoice: View {
         Button(action: toggle) {
             VStack(spacing: 14.5) {
                 ZStack {
-                    Color(white: space.theme.palette.isDark ? 0.12 : 0.97)
-                    SpaceBackground(palette: space.theme.palette)
+                    let palette = store.displayTheme(for: space).palette
+                    Color(white: palette.isDark ? 0.12 : 0.97)
+                    SpaceBackground(palette: palette)
                 }
                 .frame(width: 63, height: 95)
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))

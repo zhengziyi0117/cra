@@ -88,7 +88,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         ArcTooltipController.shared.tones = { [unowned self] window in
             var w: NSWindow? = window
             while let x = w {
-                if let m = mainWindows.first(where: { $0.window === x }) { return TooltipTones(theme: m.focusedSpace.theme) }
+                if let m = mainWindows.first(where: { $0.window === x }) { return TooltipTones(theme: m.focusedTheme) }
                 w = x.parent
             }
             return nil
@@ -2212,10 +2212,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
                     // seeThrough: the window shows the blurred desktop under the sidebar, through the material
                     // (dark vibrant) or the backdrop layer (light vibrant, one colour), not an opaque fill (#643).
                     NSLog("Cra theme shown %@: space=%@ follows=%d theme=%@ shell=%@ sidebar=%@ library=%@ material=%@ seeThrough=%d vibrant=%d intensity=%.2f",
-                          label, space.title, space.theme.followsSystem ? 1 : 0,
-                          side(space.theme.shown.isDark), side(m.shell.isDarkTheme), drawn, m.sidebarUI.libraryPage.map { "\($0)" } ?? "-", material,
+                          label, space.title, m.focusedTheme.followsSystem ? 1 : 0,
+                          side(m.focusedTheme.shown.isDark), side(m.shell.isDarkTheme), drawn, m.sidebarUI.libraryPage.map { "\($0)" } ?? "-", material,
                           m.window?.isOpaque == false && !(m.shell.vibrancy.isHidden && m.shell.backdropHost.isHidden) ? 1 : 0,
-                          space.theme.shown.vibrant ? 1 : 0, space.theme.shown.intensity)
+                          m.focusedTheme.shown.vibrant ? 1 : 0, m.focusedTheme.shown.intensity)
                 }
                 return
             }
@@ -2868,7 +2868,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
                 let tabs = store.children(of: store.focusedSpace.todayContainerID).filter { $0.tab != nil }
                 guard tabs.count > 1 else { return }
                 let kind = CombineDropPreview.Kind.split(leading: c == "leading")
-                let pal = store.focusedSpace.theme.palette
+                let pal = store.focusedTheme().palette
                 let v = CombineDropPreview(kind: kind, target: tabs[0], dragged: tabs[1], depth: 0, palette: pal, favicons: favicons)
                 v.frame = NSRect(x: 10, y: content.bounds.height - 420, width: 300, height: CraMetrics.rowHeight)
                 content.addSubview(v)
@@ -4025,7 +4025,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         copy(CraVersion.line(short: info?["CFBundleShortVersionString"] as? String ?? "dev",
                              build: info?["CFBundleVersion"] as? String ?? "",
                              engine: EngineVersion.label(chromium: CraCEFRuntime.chromiumVersion(), cef: CraCEFRuntime.cefVersion())))
-        settingsController?.showToast("Cra version copied to clipboard", colors: ShinyToast.colors(main.focusedSpace.theme))
+        settingsController?.showToast("Cra version copied to clipboard", colors: ShinyToast.colors(main.focusedTheme))
     }
 
     private func copy(_ s: String) {

@@ -13,6 +13,7 @@ import SwiftUI
 /// (SpaceThemeVariants): one colour is Arc's one-dot fill, two or three a gradient, and Auto
 /// always gets a light and a dark half (#155).
 struct SpaceStyleEditor: View {
+    @Environment(SidebarStore.self) private var store
     @State private var theme: SpaceTheme
     @State private var pad: PadState
     let onChange: (SpaceTheme) -> Void
@@ -71,6 +72,10 @@ struct SpaceStyleEditor: View {
             .padding(.leading, 17)
             .padding(.trailing, 23)
             .padding(.top, 22)
+            if store.settings.uniformSpaceColors {
+                Text("Turn off uniform colors in Settings › Tabs to see this theme.")
+                    .font(.caption)
+            }
             Spacer(minLength: 0)
         }
         .frame(width: 355, height: 503)

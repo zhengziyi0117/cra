@@ -384,13 +384,18 @@ struct PersonalizationStep: View {
         ZStack(alignment: .topLeading) {
             StepHeader(title: "Make it yours",
                        subtitle: "Pick the theme color and layout that feel right for you.", c: c)
-            HStack(spacing: (ImportMetrics.columnWidth - 34 * CGFloat(SpaceTheme.presets.count)) / CGFloat(SpaceTheme.presets.count - 1)) {
-                ForEach(SpaceTheme.presets.indices, id: \.self) { i in
-                    ThemeSwatch(theme: SpaceTheme.presets[i], on: model.chosenTheme == i, c: c) { model.chooseTheme(i) }
+            VStack(alignment: .leading, spacing: 7) {
+                Toggle("Use the same color for all Spaces", isOn: $model.uniformSpaceColors)
+                if !model.uniformSpaceColors {
+                    HStack(spacing: (ImportMetrics.columnWidth - 34 * CGFloat(SpaceTheme.presets.count)) / CGFloat(SpaceTheme.presets.count - 1)) {
+                        ForEach(SpaceTheme.presets.indices, id: \.self) { i in
+                            ThemeSwatch(theme: SpaceTheme.presets[i], on: model.chosenTheme == i, c: c) { model.chooseTheme(i) }
+                        }
+                    }
                 }
             }
             .frame(width: ImportMetrics.columnWidth, alignment: .leading)
-            .offset(y: ImportMetrics.listTop)
+            .offset(y: ImportMetrics.listTop - 20)
             Text("Choose where the address bar goes:")
                 .font(.system(size: 13))
                 .foregroundStyle(c.body)

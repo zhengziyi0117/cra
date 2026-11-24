@@ -138,7 +138,7 @@ final class LibraryView: NSView {
 
     private func apply() {
         // The icons take Arc's maxContrastColor and cutoutColor of the space's theme.
-        let tones = LibraryRailTile.iconColors(theme: store.focusedSpace(window: ui.windowID).theme.shown, dark: palette.isDark)
+        let tones = LibraryRailTile.iconColors(theme: store.focusedTheme(window: ui.windowID).shown, dark: palette.isDark)
         func ink(_ c: RGB) -> NSColor { NSColor(srgbRed: min(1, max(0, c.r)), green: min(1, max(0, c.g)), blue: min(1, max(0, c.b)), alpha: 1) }
         rail.tones = (ink(tones.lines), ink(tones.inside))
         spaces?.accent = accent
