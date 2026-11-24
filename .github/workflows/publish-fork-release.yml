@@ -1,0 +1,58 @@
+name: Publish fork release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: publish-fork-release
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    if: github.repository == 'zhengziyi0117/cra' && github.ref == 'refs/heads/fork-release'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+
+      - name: Tag the selected fork commit and queue its release build
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          upstream=VictorKildahl/cra
+          # Name the package after the newest upstream release already merged into this commit.
+          git fetch --no-tags "https://github.com/$upstream.git" 'refs/tags/v*:refs/tags/upstream/v*'
+          tag=$(git tag --merged HEAD --list 'upstream/v*' --sort=-version:refname |
+            sed -nE 's|^upstream/(v[0-9]+\.[0-9]+\.[0-9]+)$|\1|p' | sed -n '1p')
+          [[ -n $tag ]] || { echo 'No upstream application release found in fork history'; exit 1; }
+          gh api "repos/$upstream/releases/tags/$tag" --jq 'select(.draft == false and .prerelease == false) | .tag_name' | grep -Fx "$tag"
+          commit=$(git rev-parse "refs/tags/upstream/$tag^{commit}")
+          revision=$(git rev-list --count "$commit..HEAD")
+          fork_tag="$tag-fork.$revision"
+          if git show-ref --verify --quiet "refs/tags/$fork_tag"; then
+            [[ $(git rev-parse "$fork_tag^{commit}") == "$(git rev-parse HEAD)" ]]
+          else
+            git tag "$fork_tag"
+          fi
+          git push origin "refs/tags/$fork_tag"
+
+          if [[ $(gh release view "$fork_tag" --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft 2>/dev/null) == false ]]; then
+            echo "$fork_tag is already published." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          queued=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow release.yml --branch "$fork_tag" --limit 10 \
+            --json status --jq '[.[] | select(.status != "completed")] | length')
+          if [[ $queued -gt 0 ]]; then
+            echo "$fork_tag already has a release build in progress." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          # A push with GITHUB_TOKEN does not fire the tag workflow. Dispatch it at the tag.
+          gh workflow run release.yml --repo "$GITHUB_REPOSITORY" --ref "$fork_tag" -f version="${tag#v}"
+          echo "Queued Release for $fork_tag at $(git rev-parse HEAD)." >> "$GITHUB_STEP_SUMMARY"

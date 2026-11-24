@@ -1,6 +1,6 @@
 # Maintaining the Cra fork
 
-Work on `fork-release` in `zhengziyi0117/cra`. The upstream repository is `VictorKildahl/cra`.
+Keep personal changes on `fork-release` in `zhengziyi0117/cra`. The fork’s `main` branch mirrors `VictorKildahl/cra:main`. **Sync upstream main** fast-forwards that mirror every Monday at 04:17 Asia/Shanghai and can also run on demand. If the histories diverge, inspect the commits before updating the mirror.
 
 ## Before each update
 
@@ -13,9 +13,9 @@ git fetch --no-tags upstream "refs/tags/$tag" &&
   git merge-base --is-ancestor 'FETCH_HEAD^{commit}' HEAD
 ```
 
-When behind, merge that release into `fork-release`. Preserve the fork’s GitHub Actions workflows, Apple silicon packaging, Sparkle update URLs and signing configuration. Resolve source conflicts with the fork’s features in mind.
+When updating the fork, manually merge the chosen upstream release into `fork-release` if it is missing. Preserve the fork’s GitHub Actions workflows, Apple silicon packaging, Sparkle update URLs and signing configuration. Resolve source conflicts with the fork’s features in mind.
 
-**Sync upstream release** also checks every Monday at 04:17 Asia/Shanghai. It merges the latest stable application tag and queues a fork release when needed. Use this workflow for an explicitly requested release.
+For an explicitly requested release, run **Publish fork release** on `fork-release`. It tags the selected fork commit using the latest upstream application release in its history, then queues the signed Sparkle update for both channels.
 
 ## Validation
 

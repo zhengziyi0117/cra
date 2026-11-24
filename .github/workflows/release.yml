@@ -1,6 +1,6 @@
 name: Release
 
-# To cut a release, run Sync upstream release on fork-release
+# To cut a release, run Publish fork release on fork-release
 # Signing and notarization run when the secrets below exist; otherwise the
 # job publishes an ad-hoc build with install steps from release-notes-unsigned.md.
 #
