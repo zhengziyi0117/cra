@@ -184,8 +184,8 @@ struct SharingTests {
         // A new setting has to be put in one list or the other before it ships.
         #expect(Set(keys).subtracting(sorted).isEmpty, "unsorted: \(Set(keys).subtracting(sorted).sorted())")
         #expect(UsageStats.reportedSettings.isDisjoint(with: UsageStats.unreportedSettings))
-        // autoArchiveDays is only written for thresholds longer than Arc's.
-        #expect(sorted.subtracting(keys).subtracting(["autoArchiveDays"]).isEmpty, "not settings: \(sorted.subtracting(keys).sorted())")
+        // autoArchiveDays is only written for thresholds longer than Arc's, customSpaceTheme once a theme is saved.
+        #expect(sorted.subtracting(keys).subtracting(["autoArchiveDays", "customSpaceTheme"]).isEmpty, "not settings: \(sorted.subtracting(keys).sorted())")
     }
 
     @Test func onlyChangedSettingsAreReportedAndNeverText() {

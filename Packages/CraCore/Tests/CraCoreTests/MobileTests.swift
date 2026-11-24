@@ -928,7 +928,7 @@ struct MobileSpacesTests {
         #expect(spaces[0].rows[1].kind == .folder(open: false))
         #expect(spaces[0].rows[2].kind == .todayHeader)
         #expect(spaces[1].rows.isEmpty)
-        #expect(spaces[0].colors == SpaceTheme.presets[0].colors)
+        #expect(spaces[0].colors == SpaceTheme.arcDefault.colors)
         let opened = MobileSpaces.spaces(in: document, openFolders: [folder])
         #expect(opened[0].rows.map(\.title) == ["Inbox", "Work", "Docs", "Today", "news.example"])
         #expect(opened[0].rows.map(\.depth) == [0, 0, 1, 0, 0])
