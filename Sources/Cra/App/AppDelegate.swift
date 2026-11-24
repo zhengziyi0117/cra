@@ -50,7 +50,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         // Before any window docks: window managers see one Cra window, not its page and panels (#391).
         DockedWindowAccessibility.install()
         SystemAppearance.shared.start()
-        observeChanges(of: { SystemAppearance.shared.macOSIsDark }) { [store] in store.macOSIsDark = $0 }
         DocumentPictureInPictureSpring.shared.start()
         installURLEventHandler()
         observeFrontmostApp()

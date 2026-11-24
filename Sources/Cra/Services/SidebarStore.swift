@@ -531,11 +531,11 @@ final class SidebarStore {
     func item(_ id: UUID) -> SidebarItem? { items[id] }
     func space(_ id: UUID) -> Space? { spaces[id] }
 
-    var macOSIsDark = false
-
     private var uniformPreview: (editor: UUID, theme: SpaceTheme)?
 
-    var editableUniformTheme: SpaceTheme {
+    /// Left unresolved like every space's theme: `shown` and `palette` pick its half, so View ▸
+    /// Appearance reaches it too (#700), not only the desktop's appearance.
+    var uniformTheme: SpaceTheme {
         if let uniformPreview { return uniformPreview.theme }
         guard settings.useCustomSpaceColor else { return .arcDefault }
         if let theme = settings.customSpaceTheme { return theme }
@@ -544,10 +544,6 @@ final class SidebarStore {
                                dark: SpaceThemeVariants.uniform(color: hex, systemDark: true))
         theme.key = [hex]
         return theme
-    }
-
-    var uniformTheme: SpaceTheme {
-        editableUniformTheme.resolved(systemDark: macOSIsDark)
     }
 
     func usesUniformTheme(for spaceID: UUID?) -> Bool {

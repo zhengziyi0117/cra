@@ -12,7 +12,7 @@ struct SpaceStyleEditor: View {
     var body: some View {
         @Bindable var store = store
         let shared = store.usesUniformTheme(for: spaceID)
-        ThemePadView(theme: shared ? store.editableUniformTheme : privateTheme(),
+        ThemePadView(theme: shared ? store.uniformTheme : privateTheme(),
                            uniformColors: store.isStandalone(space: spaceID) ? nil : $store.settings.uniformSpaceColors) { theme in
             if shared {
                 store.previewUniformTheme(theme, editor: editorID)
