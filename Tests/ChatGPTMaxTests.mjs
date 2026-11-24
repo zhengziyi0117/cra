@@ -44,10 +44,17 @@ async function mockProvider(helper) {
     }
     case 'https://api.openai.com/v1/models':
       assert.equal(new Headers(options.headers).get('authorization'), 'Bearer synthetic-access');
-      return Response.json({ models: [{ slug: 'test-model', display_name: 'Test Model', visibility: 'list' }] });
+      return Response.json({ models: [
+        { slug: 'test-model', display_name: 'Test Model', visibility: 'list' },
+        { slug: 'second', display_name: 'Second', visibility: 'list', supported_reasoning_levels: [{ effort: 'high' }] },
+      ] });
     case 'https://api.openai.com/v1/responses': {
       const body = JSON.parse(options.body);
-      assert.equal(body.model, 'test-model');
+      if (body.model === 'second') assert.deepEqual(body.reasoning, { effort: 'high' });
+      else {
+        assert.equal(body.model, 'test-model');
+        assert.ok(!('reasoning' in body));
+      }
       assert.equal(body.store, false);
       assert.deepEqual(body.input, [{ role: 'user', content: 'Test page' }]);
       const events = [{ type: 'response.output_text.delta', delta: '{"answer":"42"}' }];
@@ -78,14 +85,17 @@ async function run(app) {
   }
   try {
     assert.equal((await request('status')).connected, false);
-    assert.deepEqual(await request('connect'), { connected: true, account: 'test@example.invalid', model: 'test-model' });
+    const models = [{ slug: 'test-model', displayName: 'Test Model' },
+      { slug: 'second', displayName: 'Second', supportedEfforts: ['high'] }];
+    assert.deepEqual(await request('connect'), { connected: true, account: 'test@example.invalid', models });
     const saved = await readFile(join(directory, 'chatgpt-auth.json'), 'utf8');
     assert.ok(JSON.parse(saved).ciphertext);
     assert.ok(!saved.includes('synthetic') && !saved.includes('test@example.invalid'));
     assert.equal((await request('status', { key: randomBytes(32).toString('base64') })).connected, false);
-    assert.equal((await request('status')).model, 'test-model');
+    assert.deepEqual((await request('status')).models, models);
     const fields = { model: 'test-model', messages: [{ role: 'user', content: 'Test page' }] };
     assert.deepEqual(await request('answer', fields), { text: '{"answer":"42"}' });
+    assert.deepEqual(await request('answer', { ...fields, model: 'second', reasoningEffort: 'high' }), { text: '{"answer":"42"}' });
     assert.equal((await request('answer', { ...fields, instructions: 'interrupted' })).code, 'stream_interrupted');
     assert.equal((await request('disconnect')).connected, false);
     assert.equal((await request('answer', fields)).code, 'sign_in_required');

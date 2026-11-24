@@ -1,0 +1,38 @@
+--- a/models.ts
++++ b/models.ts
+@@ -1 +1,2 @@
++/*! Modified by Cra to support reasoning effort. Sign-in with ChatGPT DevKit Noncommercial License. */
+ import { apiError, ChatGPTError, fetchRemote, isObject, jsonResponse } from "./errors.js";
+@@ -20,3 +21,8 @@
+     }
+-    result.push({ slug: model.slug, displayName: model.display_name });
++    const levels = model.supported_reasoning_levels;
++    const supportedEfforts = Array.isArray(levels) ? [...new Set(levels.flatMap(level => {
++      const effort = isObject(level) ? level.effort : level;
++      return typeof effort === "string" && /^[a-z][a-z0-9_-]{0,31}$/.test(effort) ? [effort] : [];
++    }))] : undefined;
++    result.push({ slug: model.slug, displayName: model.display_name, supportedEfforts });
+   }
+--- a/responses.ts
++++ b/responses.ts
+@@ -1 +1,2 @@
++/*! Modified by Cra to support reasoning effort. Sign-in with ChatGPT DevKit Noncommercial License. */
+ import OpenAI from "openai";
+@@ -42,2 +43,4 @@
+       model: options.model,
++      // The live catalog can advertise an effort before the Node SDK names it in its type union.
++      ...(options.reasoningEffort ? { reasoning: { effort: options.reasoningEffort as OpenAI.ReasoningEffort } } : {}),
+       input: input.map((message) => ({ role: message.role, content: message.content })),
+--- a/types.ts
++++ b/types.ts
+@@ -1 +1,2 @@
++/*! Modified by Cra to support reasoning effort. Sign-in with ChatGPT DevKit Noncommercial License. */
+ export interface SessionIdentity {
+@@ -40,2 +41,3 @@
+   displayName: string;
++  supportedEfforts?: string[];
+ }
+@@ -76,2 +78,3 @@
+   model: string;
++  reasoningEffort?: string;
+   input: string | ResponseInputMessage[];

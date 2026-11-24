@@ -26,9 +26,15 @@ if [ ! -f "$sdk/.installed" ]; then
   touch "$sdk/.installed"
 fi
 resources="$app/Contents/Resources/chatgpt"
-"$sdk/node_modules/.bin/esbuild" scripts/chatgpt/helper.mjs --platform=node --format=cjs --target=node24 \
-  --alias:@siwc/local="$sdk/packages/local/src/index.ts" \
-  --bundle --outfile="$resources/helper.cjs"
+(
+  # Patch a private source copy so parallel builds share only the pristine DevKit.
+  src=$(mktemp -d "$sdk/cra-local.XXXXXX")
+  trap 'rm -rf "$src"' EXIT
+  cp -R "$sdk/packages/local/src/." "$src/"
+  (cd "$src" && patch -s -p1 < "$root/scripts/chatgpt/reasoning-effort.patch")
+  "$sdk/node_modules/.bin/esbuild" scripts/chatgpt/helper.mjs --platform=node --format=cjs --target=node24 \
+    --alias:@siwc/local="$src/index.ts" --bundle --outfile="$resources/helper.cjs"
+)
 cp "$sdk/LICENSE" "$sdk/THIRD_PARTY_NOTICES.md" "$resources/"
 node="node-v24.22.0-darwin-$cpu"
 cache="$root/vendor/chatgpt/$node"

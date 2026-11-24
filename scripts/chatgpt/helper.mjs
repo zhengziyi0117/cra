@@ -31,12 +31,12 @@ function encryption(key) {
 input.once('line', async line => {
   let reply;
   try {
-    const { command, key, directory, model, instructions, messages } = JSON.parse(line);
+    const { command, key, directory, model, reasoningEffort, instructions, messages } = JSON.parse(line);
     const client = createChatGPT({ appName: 'Cra', appId: 'cra-max', storageDir: directory,
       redirectPort: 0, credentialEncryption: encryption(Buffer.from(key, 'base64')) });
     const signal = controller.signal;
     if (command === 'answer') {
-      const { text } = await client.streamResponse({ model, instructions, input: messages, signal });
+      const { text } = await client.streamResponse({ model, reasoningEffort, instructions, input: messages, signal });
       if (Buffer.byteLength(text) > 300_000) throw new Error('Oversized reply');
       reply = { text };
     } else {
@@ -53,9 +53,8 @@ input.once('line', async line => {
         error: session.error?.message };
       if (session.sharing) {
         try {
-          const [first] = await client.listModels({ signal });
-          reply.model = first?.slug;
-          if (!first) reply.error = 'Your ChatGPT plan currently offers no models to Cra.';
+          reply.models = await client.listModels({ signal });
+          if (!reply.models.length) reply.error = 'Your ChatGPT plan currently offers no models to Cra.';
         } catch (error) {
           if (!(error instanceof ChatGPTError)) throw error;
           reply.error = error.message;
@@ -65,7 +64,9 @@ input.once('line', async line => {
       }
     }
   } catch (error) {
-    reply = { error: error instanceof ChatGPTError ? error.message : 'ChatGPT could not complete this request.',
+    const effortRejected = error instanceof ChatGPTError && ['reasoning', 'reasoning.effort'].includes(error.param);
+    reply = { error: effortRejected ? 'ChatGPT rejected this reasoning effort. Choose another level or Model default in Max settings.'
+      : error instanceof ChatGPTError ? error.message : 'ChatGPT could not complete this request.',
       code: error instanceof ChatGPTError ? error.code : undefined };
   }
   process.stdout.write(JSON.stringify(reply));

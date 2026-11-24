@@ -10,7 +10,20 @@ final class ChatGPTMax {
     private(set) var selected = false
     private(set) var connected = false
     private(set) var account: String?
-    private(set) var model: String?
+    private(set) var models: [ChatGPTHelper.Model] = []
+    private struct Preferences: Codable {
+        var model: String?
+        var effort: String?
+    }
+    private var preferences = Preferences()
+    var model: ChatGPTHelper.Model? {
+        models.first { $0.slug == preferences.model } ?? models.first
+    }
+    var reasoningEffort: String? {
+        guard let model, model.slug == preferences.model, let effort = preferences.effort,
+              model.effortOptions.contains(effort) else { return nil }
+        return effort
+    }
     enum ConnectionAction: String { case status, connect, disconnect }
     private(set) var pending: ConnectionAction?
     private(set) var error: String?
@@ -22,9 +35,16 @@ final class ChatGPTMax {
     @ObservationIgnored private var epoch = UUID()
     private var selectionFile: URL? { directory?.appendingPathComponent("use-chatgpt") }
 
+    private var preferencesFile: URL? { directory?.appendingPathComponent("chatgpt-preferences.json") }
+
     func configure(directory: URL, invalidate: @escaping () -> Void) {
         self.directory = directory
         self.invalidate = invalidate
+        if let file = preferencesFile, let data = try? Data(contentsOf: file) {
+            preferences = (try? JSONDecoder().decode(Preferences.self, from: data)) ?? Preferences()
+        } else {
+            preferences = Preferences()
+        }
         selected = selectionFile.map { FileManager.default.fileExists(atPath: $0.path) } ?? false
         if selected { refresh() }
     }
@@ -43,13 +63,35 @@ final class ChatGPTMax {
         epoch = UUID()
         operation?.cancel()
         selected = cloud
-        model = nil
+        models = []
         account = nil
         connected = false
         error = nil
         pending = nil
         invalidate()
         if cloud { refresh() }
+    }
+
+    func chooseModel(_ slug: String) {
+        guard slug != model?.slug, models.contains(where: { $0.slug == slug }) else { return }
+        save(Preferences(model: slug, effort: nil))
+    }
+
+    func chooseEffort(_ effort: String?) {
+        guard let model, effort != reasoningEffort else { return }
+        if let effort, !model.effortOptions.contains(effort) { return }
+        save(Preferences(model: model.slug, effort: effort))
+    }
+
+    private func save(_ choice: Preferences) {
+        guard let file = preferencesFile else { return }
+        do {
+            try JSONEncoder().encode(choice).write(to: file, options: .atomic)
+            preferences = choice
+            error = nil
+            epoch = UUID()
+            invalidate()
+        } catch { self.error = "Cra couldn’t save the ChatGPT model settings." }
     }
 
     func refresh() {
@@ -63,7 +105,7 @@ final class ChatGPTMax {
         epoch = UUID()
         let token = epoch
         let previouslyAvailable = available
-        model = nil
+        models = []
         pending = action
         error = nil
         if previouslyAvailable { invalidate() }
@@ -73,7 +115,7 @@ final class ChatGPTMax {
                 guard token == epoch else { return }
                 connected = reply.connected ?? (reply.code == "revocation_failed" ? false : connected)
                 account = connected ? reply.account ?? account : nil
-                model = connected ? reply.model : nil
+                models = connected ? reply.models ?? [] : []
                 error = reply.error
             } catch {
                 guard token == epoch else { return }
@@ -92,7 +134,7 @@ final class ChatGPTMax {
                               history: [ChatGPTHelper.Message] = []) async throws -> T {
         guard let directory, selected, let model else { throw ChatGPTHelper.Failure("Connect ChatGPT in Max settings.") }
         let token = epoch
-        let reply = try await ChatGPTHelper.call(command: "answer", directory: directory, model: model,
+        let reply = try await ChatGPTHelper.call(command: "answer", directory: directory, model: model.slug, reasoningEffort: reasoningEffort,
             instructions: instructions + "\nReturn only a JSON object, without a code fence. Use this shape: " + shape,
             messages: history + [.init(role: "user", content: prompt)])
         try Task.checkCancellation()
@@ -101,7 +143,7 @@ final class ChatGPTMax {
             error = message
             if ["sign_in_required", "sharing_not_enabled", "invalid_grant", "invalid_refresh_token",
                 "token_expired", "refresh_token_expired", "refresh_token_invalidated", "refresh_token_reused"].contains(reply.code) {
-                self.model = nil
+                self.models = []
                 invalidate()
             }
             throw ChatGPTHelper.Failure(message)
@@ -112,11 +154,20 @@ final class ChatGPTMax {
 }
 
 enum ChatGPTHelper {
+    struct Model: Decodable {
+        let slug: String
+        let displayName: String
+        let supportedEfforts: [String]?
+
+        var effortOptions: [String] {
+            supportedEfforts ?? ["none", "minimal", "low", "medium", "high", "xhigh", "max"]
+        }
+    }
     struct Message: Encodable { let role: String; let content: String }
     struct Reply: Decodable {
         let connected: Bool?
         let account: String?
-        let model: String?
+        let models: [Model]?
         let text: String?
         let error: String?
         let code: String?
@@ -130,18 +181,19 @@ enum ChatGPTHelper {
         let directory: String
         let key: Data
         let model: String?
+        let reasoningEffort: String?
         let instructions: String?
         let messages: [Message]
     }
 
-    static func call(command: String, directory: URL, model: String? = nil, instructions: String? = nil,
-                     messages: [Message] = []) async throws -> Reply {
+    static func call(command: String, directory: URL, model: String? = nil, reasoningEffort: String? = nil,
+                     instructions: String? = nil, messages: [Message] = []) async throws -> Reply {
         guard let node = Bundle.main.url(forAuxiliaryExecutable: "CraMaxNode"),
               let script = Bundle.main.url(forResource: "helper", withExtension: "cjs", subdirectory: "chatgpt")
         else { throw Failure("The ChatGPT helper is missing from this copy of Cra.") }
         let key = try storageKey(for: directory)
         let payload = try JSONEncoder().encode(Request(command: command, directory: directory.path, key: key,
-                                                      model: model, instructions: instructions, messages: messages))
+                                                      model: model, reasoningEffort: reasoningEffort, instructions: instructions, messages: messages))
         return try await exchange(node: node, script: script, payload: payload)
     }
 

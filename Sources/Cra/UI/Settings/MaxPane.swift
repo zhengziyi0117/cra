@@ -120,7 +120,6 @@ private struct MaxProviderSettings: View {
                 SettingsCardRow {
                     VStack(alignment: .leading, spacing: 3) {
                         Text(cloud.account ?? (cloud.connected ? "Signed in to ChatGPT" : "ChatGPT account"))
-                        if let model = cloud.model { Text(model).font(.caption).foregroundStyle(.secondary) }
                         Link("Manage usage", destination: URL(string: "https://chatgpt.com/settings/usage")!)
                     }
                 } trailing: {
@@ -137,6 +136,32 @@ private struct MaxProviderSettings: View {
                         if cloud.connected {
                             Button("Disconnect") { cloud.changeConnection(.disconnect) }
                         }
+                    }
+                }
+                if let model = cloud.model {
+                    SettingsCardDivider()
+                    SettingsCardRow {
+                        Text("Model")
+                    } trailing: {
+                        Picker("Model", selection: Binding(get: { model.slug }, set: cloud.chooseModel)) {
+                            ForEach(cloud.models, id: \.slug) { Text($0.displayName).tag($0.slug) }
+                        }.labelsHidden()
+                    }
+                    SettingsCardDivider()
+                    SettingsCardRow {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("Reasoning effort")
+                            if model.supportedEfforts == nil {
+                                Text("Available levels vary by model.").font(.caption).foregroundStyle(.secondary)
+                            }
+                        }
+                    } trailing: {
+                        Picker("Reasoning effort", selection: Binding(get: { cloud.reasoningEffort }, set: cloud.chooseEffort)) {
+                            Text("Model default").tag(String?.none)
+                            ForEach(model.effortOptions, id: \.self) { effort in
+                                Text(effort == "xhigh" ? "Extra high" : effort.capitalized).tag(Optional(effort))
+                            }
+                        }.labelsHidden().disabled(model.effortOptions.isEmpty)
                     }
                 }
             }

@@ -141,7 +141,7 @@ anonymous daily usage stats and crash reports, never the sites you visit
 `~/Library/Application Support/Cra`. A built-in blocker stops
 requests to more than 22,000 ad and tracker domains.
 
-On macOS, select **Settings ▸ Max ▸ AI provider ▸ ChatGPT** and **Sign in with ChatGPT** to use an eligible ChatGPT plan. Enabled features send the page excerpts, conversation, search terms, titles, domains or filenames needed for the request to OpenAI. Instant Links also sends searches to your search engine. Select Apple Intelligence to return to on-device processing.
+On macOS, select **Settings ▸ Max ▸ AI provider ▸ ChatGPT** and **Sign in with ChatGPT** to use an eligible ChatGPT plan. Choose a model and reasoning effort in the same pane, or keep the model’s default effort. Enabled features send the page excerpts, conversation, search terms, titles, domains or filenames needed for the request to OpenAI. Instant Links also sends searches to your search engine. Select Apple Intelligence to return to on-device processing.
 
 Pages run in Chromium's sandbox with site isolation, passwords and cookies are encrypted
 with a key in your Keychain, and new Chromium releases are checked daily and shipped as
