@@ -302,7 +302,6 @@ final class LittleWindowController: NSWindowController, NSWindowDelegate, @preco
             guard let self, let colors, let window = self.window else { return }
             let appearance = NSAppearance(named: colors.isDark ? .darkAqua : .aqua)
             window.appearance = appearance
-            self.commandPanel.appearance = appearance
             self.commandBar.theme = self.displayTheme
             self.popup?.appearance = appearance
             if !self.isPeek { window.backgroundColor = colors.surface }

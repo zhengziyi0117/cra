@@ -108,7 +108,7 @@ final class CommandBarView: NSView {
     /// theme and appearance rather than on every keystroke.
     private func tones(dark: Bool) -> CommandBarTones {
         if let t = shownTones, t.0 == controller.theme, t.1 == dark { return t.2 }
-        let tones = CommandBarTones(theme: controller.theme ?? SpaceTheme(colors: ["#010220"], intensity: 1, noise: 0, appearance: "dark"), dark: dark)
+        let tones = CommandBarTones(theme: controller.theme ?? SpaceTheme.arcDefault.resolved(systemDark: dark), dark: dark)
         shownTones = (controller.theme, dark, tones)
         return tones
     }
@@ -178,18 +178,9 @@ final class CommandBarView: NSView {
         info.contentTintColor = dark ? NSColor.white.withAlphaComponent(0.55) : NSColor.labelColor.withAlphaComponent(0.55)
         border.strokeColor = NSColor.labelColor.withAlphaComponent(dark ? 0.12 : 0.08).cgColor
         divider.layer?.backgroundColor = NSColor.labelColor.withAlphaComponent(0.08).cgColor
-        // Both the standalone card and the address editor belong to the Little Window's space.
-        let little = c.window == .littleWindow
-        material.isHidden = little
         closeTile.isHidden = card == nil
-        if little, let theme = c.theme {
-            let colors = SpaceChromeColors(theme.palette)
-            tint.layer?.backgroundColor = colors.surface.cgColor
-            border.strokeColor = colors.outline.cgColor
-            divider.layer?.backgroundColor = colors.outline.cgColor
-            closeTile.layer?.backgroundColor = colors.pill.cgColor
-            closeTile.contentTintColor = colors.text
-        }
+        closeTile.layer?.backgroundColor = NSColor.labelColor.withAlphaComponent(0.06).cgColor
+        closeTile.contentTintColor = .secondaryLabelColor
         let scope = c.scope
         if c.isOpen, (scope == nil) != (shownScope == nil) {
             let site: SiteSearch? = if case .site(let site) = scope { site } else { nil }
@@ -224,7 +215,7 @@ final class CommandBarView: NSView {
         // Arc's developer panel has no ⓘ at the field's end.
         if developer != nil { info.isHidden = true }
         notice.isHidden = !c.showsNoticeBanner
-        if !notice.isHidden { notice.apply(tones: tones) }
+        if !notice.isHidden { notice.apply(tones: tones, dark: dark) }
         keycap.isHidden = offered == nil
         if let offered {
             hint.stringValue = "Search \(offered.name)"
@@ -681,7 +672,7 @@ private final class CommandBarBadge: NSImageView {
     }
 }
 
-/// Arc's search-suggestions banner (CommandBar.SearchSuggestionsPrivacyView, Arc 1.172.1 at 2x, #314): black,
+/// Arc's search-suggestions banner (CommandBar.SearchSuggestionsPrivacyView, Arc 1.172.1 at 2x, #314):
 /// a 13 pt (i) centred 24 pt in, "We talk to your search engine to help us suggest results." in 13 pt bold
 /// from 46.5 pt with "Learn more about your data on … here." under it in 12 pt grey, and Search Settings…
 /// (130.5 pt) and Dismiss (71 pt), 37 pt tall, 10 pt apart and 10 pt from the edge.
@@ -700,13 +691,12 @@ private final class SearchSuggestionsBannerView: NSView {
     override init(frame: NSRect) {
         super.init(frame: frame)
         wantsLayer = true
-        layer?.backgroundColor = NSColor.black.cgColor
         icon.image = SidebarSymbols.image("info.circle", size: 13, weight: .regular)
         icon.imageScaling = .scaleNone
-        icon.contentTintColor = NSColor(white: 115 / 255, alpha: 1)
+        icon.contentTintColor = .secondaryLabelColor
         title.stringValue = "We talk to your search engine to help us suggest results."
-        title.textColor = NSColor(white: 237 / 255, alpha: 1)
-        let ink = NSColor(white: 126 / 255, alpha: 1), font = NSFont.systemFont(ofSize: 12)
+        title.textColor = .labelColor
+        let ink = NSColor.secondaryLabelColor, font = NSFont.systemFont(ofSize: 12)
         let text = NSMutableAttributedString(string: Self.lead, attributes: [.font: font, .foregroundColor: ink])
         text.append(NSAttributedString(string: "here", attributes: [.font: font, .foregroundColor: ink, .underlineStyle: NSUnderlineStyle.single.rawValue]))
         text.append(NSAttributedString(string: ".", attributes: [.font: font, .foregroundColor: ink]))
@@ -724,8 +714,10 @@ private final class SearchSuggestionsBannerView: NSView {
 
     override var isFlipped: Bool { true }
 
-    func apply(tones: CommandBarTones) {
-        for b in [settings, dismiss] { b.set(fill: CommandBarView.ink(tones.noticeButtonFill), outline: CommandBarView.ink(tones.noticeButtonOutline)) }
+    func apply(tones: CommandBarTones, dark: Bool) {
+        let fill = dark ? CommandBarView.ink(tones.noticeButtonFill) : CommandBarView.ink(tones.selection.rgb, 0.12)
+        let outline = dark ? CommandBarView.ink(tones.noticeButtonOutline) : NSColor.separatorColor
+        for button in [settings, dismiss] { button.set(fill: fill, outline: outline) }
     }
 
     private static let lead = "Learn more about your data on Cra "
@@ -778,7 +770,7 @@ private final class NoticeLinkLabel: NSView {
     }
 }
 
-/// The banner's buttons: the space's focus colour over black, a 1 pt outline, 5 pt corners, 13 pt white.
+/// The banner's buttons use the space accent over the command panel.
 private final class NoticeButton: NSView {
     var onClick: () -> Void = {}
     private let label = NSTextField.sidebarLabel(size: 13, weight: .medium)
@@ -790,7 +782,7 @@ private final class NoticeButton: NSView {
         layer?.cornerCurve = .continuous
         layer?.borderWidth = 1
         label.stringValue = title
-        label.textColor = NSColor(srgbRed: 235 / 255, green: 235 / 255, blue: 239 / 255, alpha: 1)
+        label.textColor = .labelColor
         label.alignment = .center
         addSubview(label)
     }
