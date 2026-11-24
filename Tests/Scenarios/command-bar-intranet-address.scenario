@@ -1,0 +1,27 @@
+# The command bar reads text without a scheme as Chrome's omnibox does (TypedURL, AutocompleteInput::Parse).
+# A trailing slash opens an intranet short link on http. "wiki/standup" is a word Chrome can't call, so it
+# is searched; "go/standup" opens, because the go host's address was entered in the bar before (history's
+# typedCount, Chrome's known intranet host).
+budget rss=900 stalls50=40
+pace 0.5
+seed history.json [{"url":"http://go/","title":"Go","lastVisit":"2026-11-20T09:00:00Z","visitCount":1,"typedCount":1}]
+
+cra://commandbar?query=git/
+wait 1
+cra://debug?commandBarRows=slash
+expect-log Cra command bar rows slash: open=1 mode=newTab selected=0 other:http://git/( |$)
+cra://dismiss
+wait 1
+
+cra://commandbar?query=wiki/standup
+wait 1
+cra://debug?commandBarRows=unknown
+expect-log Cra command bar rows unknown: open=1 mode=newTab selected=0 other:https://\S*wiki
+cra://dismiss
+wait 1
+
+cra://commandbar?query=go/standup
+wait 1
+cra://debug?commandBarRows=typed
+expect-log Cra command bar rows typed: open=1 mode=newTab selected=0 other:http://go/standup( |$)
+cra://dismiss

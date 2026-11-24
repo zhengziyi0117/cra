@@ -21,7 +21,8 @@ struct SidebarAddressEditTests {
     func returnLoadsAnAddressOrASearchInTheTab() {
         let page = "https://example.org/a"
         #expect(SidebarAddressEdit.commit(typed: "example.org/b", currentURL: page, pinned: false, searchURL: search) == .load("https://example.org/b"))
-        #expect(SidebarAddressEdit.commit(typed: "  other.test  ", currentURL: page, pinned: false, searchURL: search) == .load("https://other.test"))
+        // .test is a reserved TLD: like Chrome, its hosts open on http (TypedURL).
+        #expect(SidebarAddressEdit.commit(typed: "  other.test  ", currentURL: page, pinned: false, searchURL: search) == .load("http://other.test"))
         #expect(SidebarAddressEdit.commit(typed: "cra browser", currentURL: page, pinned: false, searchURL: search) == .load("https://search.test/?q=cra+browser"))
         #expect(SidebarAddressEdit.commit(typed: page, currentURL: page, pinned: false, searchURL: search) == .load(page))
         #expect(SidebarAddressEdit.commit(typed: " \n", currentURL: page, pinned: false, searchURL: search) == SidebarAddressEdit.Commit.none)
@@ -32,7 +33,7 @@ struct SidebarAddressEditTests {
     func aPinnedTabSendsAnotherHostToANewTab() {
         let page = "https://example.org/a"
         #expect(SidebarAddressEdit.commit(typed: "example.org/b", currentURL: page, pinned: true, searchURL: search) == .load("https://example.org/b"))
-        #expect(SidebarAddressEdit.commit(typed: "other.test", currentURL: page, pinned: true, searchURL: search) == .newTab("https://other.test"))
+        #expect(SidebarAddressEdit.commit(typed: "other.test", currentURL: page, pinned: true, searchURL: search) == .newTab("http://other.test"))
         #expect(SidebarAddressEdit.commit(typed: "cra browser", currentURL: page, pinned: true, searchURL: search) == .newTab("https://search.test/?q=cra+browser"))
     }
 

@@ -197,6 +197,9 @@ final class SuggestionEngine {
         /// The visited pages whose address was entered in the bar, for TypedCompletion (#667), with their entries.
         var typedPages: [TypedCompletion.Page] = []
         var typedEntries: [String: HistoryEntry] = [:]
+        /// Their hosts with the scheme they were on: Chrome's known intranet hosts, which a word or
+        /// "go/standup" opens on (TypedURL).
+        var typedHosts: [String: String] = [:]
     }
 
     private var index: SearchIndex?
@@ -252,6 +255,9 @@ final class SuggestionEngine {
             guard let n = h.typedCount, n > 0, let page = TypedCompletion.Page(url: h.url, typedCount: n) else { continue }
             i.typedPages.append(page)
             i.typedEntries[h.url] = h
+            if let c = URLComponents(string: h.url), let host = c.host?.lowercased(), !host.isEmpty, let scheme = c.scheme {
+                i.typedHosts[host] = i.typedHosts[host] ?? scheme
+            }
         }
         return i
     }
@@ -360,8 +366,9 @@ final class SuggestionEngine {
     static func urlFromInput(_ s: String) -> String { TypedURL.fromInput(s) }
 
     private func typedRow(query: String) -> Suggestion {
-        if Self.looksLikeURL(query) {
-            let url = Self.urlFromInput(query)
+        let typedHosts = searchIndex.typedHosts
+        if TypedURL.looksLikeURL(query, typedHosts: typedHosts) {
+            let url = TypedURL.fromInput(query, typedHosts: typedHosts)
             return Suggestion(id: "typed", kind: .navigate, title: query, subtitle: "Open URL", url: url,
                               faviconKey: FaviconKey.key(for: url), symbol: "globe", trailing: nil, score: 1000)
         }

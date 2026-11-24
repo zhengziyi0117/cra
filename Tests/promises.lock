@@ -602,9 +602,9 @@
 #340   Packages/CraCore/Tests/CraCoreTests/LibraryWidthTests.swift::pageKeepsItsWidth  6683626032be
 #340   Tests/Scenarios/library-keeps-page.scenario  93e13ec1ba0b
 #341   Tests/FloatingSidebarTests.swift::staysInsideTheWindowsCorners  47752aeeee63
-#344   Packages/CraCore/Tests/CraCoreTests/SidebarAddressEditTests.swift::aPinnedTabSendsAnotherHostToANewTab  52bb16a0739c
+#344   Packages/CraCore/Tests/CraCoreTests/SidebarAddressEditTests.swift::aPinnedTabSendsAnotherHostToANewTab  d977dbe43647
 #344   Packages/CraCore/Tests/CraCoreTests/SidebarAddressEditTests.swift::clickEditsInPlaceOnlyWhenTurnedOnAndATabIsSelected  dbb45b4d979e
-#344   Packages/CraCore/Tests/CraCoreTests/SidebarAddressEditTests.swift::returnLoadsAnAddressOrASearchInTheTab  5fcf3ee80d37
+#344   Packages/CraCore/Tests/CraCoreTests/SidebarAddressEditTests.swift::returnLoadsAnAddressOrASearchInTheTab  aacd063f2c5f
 #344   Packages/CraCore/Tests/CraCoreTests/SidebarAddressEditTests.swift::settingDefaultsOffAndRoundTrips  9ec60d7e8be1
 #344   Tests/Scenarios/sidebar-address-edit-in-place.scenario  9da0ecad54c8
 #344   Tests/Scenarios/sidebar-address-opens-command-bar.scenario  15db6f99119d
