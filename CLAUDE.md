@@ -1,5 +1,7 @@
 # Cra: notes for coding agents
 
+For this fork, [AGENTS.md](AGENTS.md) takes precedence for upstream sync, CI and local validation.
+
 [CONTRIBUTING.md](CONTRIBUTING.md) says what fits (Arc parity by default, no cloud AI,
 nothing leaves the Mac) and how to send a change. [docs/development.md](docs/development.md)
 has the layout and the tests, and [docs/testing.md](docs/testing.md) has the test rules.

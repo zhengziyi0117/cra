@@ -1,0 +1,33 @@
+name: Package Cra
+
+on:
+  push:
+    branches: [fork-release]
+    paths-ignore: ['**.md', 'docs/**', 'LICENSE']
+  pull_request:
+    branches: [fork-release]
+    paths-ignore: ['**.md', 'docs/**', 'LICENSE']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: package-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  package:
+    name: Package for Apple silicon
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v7
+      - name: Cache the engine
+        uses: actions/cache@v6
+        with:
+          path: vendor/engine
+          key: engine-arm64-${{ hashFiles('scripts/fetch-engine.sh') }}
+      - name: Build Cra.app
+        run: scripts/build.sh debug
+      - name: Package ZIP and DMG
+        run: scripts/package.sh

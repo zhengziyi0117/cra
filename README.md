@@ -53,7 +53,7 @@ layer built in, so sites and Chrome extensions work as they do in Chrome.
 
 ### Maintaining this fork
 
-Keep personal changes on `fork-release`. Every Monday at 04:17 Shanghai time, **Sync upstream release** merges the latest published Cra application tag. Source conflicts stop the sync before the branch is pushed. The fork maintains its own GitHub Actions workflows.
+Keep personal changes on `fork-release`. Every Monday at 04:17 Shanghai time, **Sync upstream release** merges the latest published Cra application tag. Source conflicts stop the sync before the branch is pushed. The fork maintains its own GitHub Actions workflows. For the upstream check before each change and the package-only CI commands, see [AGENTS.md](AGENTS.md).
 
 To release a personal change sooner, run **Actions → Sync upstream release → Run workflow** on `fork-release`. A successful build publishes the Apple silicon app and updates both Sparkle channels. GitHub Actions signs the update archive with the `SPARKLE_PRIVATE_KEY` repository secret. The matching public key is in `resources/Info.plist`. The original key is in the maintainer’s macOS login Keychain under the Sparkle account `cra-zhengziyi0117-fork`.
 
