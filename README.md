@@ -11,7 +11,7 @@
 
 <p align="center">
   <a href="https://github.com/zhengziyi0117/cra/releases/latest/download/Cra.dmg"><b>Download for macOS</b></a> ·
-  <a href="https://crabrowser.app/iphone">iPhone beta</a> ·
+  <a href="https://apps.apple.com/app/id6834101298">iPhone (App Store)</a> ·
   <a href="https://crabrowser.app">crabrowser.app</a> ·
   <a href="https://github.com/zhengziyi0117/cra/releases">What's new</a> ·
   <a href="https://crabrowser.app/help">Help</a>
@@ -163,9 +163,11 @@ everyone.
 
 ### iPhone
 
-Cra for iPhone, the open-source take on Arc Search, is in public beta on TestFlight: join at
-[crabrowser.app/iphone](https://crabrowser.app/iphone). It needs iOS 17; Browse for Me and
-Summarize run on the iPhone's own Apple Intelligence. Its code is in [`iOS/`](iOS) and its
+Cra for iPhone, the open-source take on Arc Search, is free on the
+[App Store](https://apps.apple.com/app/id6834101298) for iPhone and iPad
+([crabrowser.app/iphone](https://crabrowser.app/iphone)). New builds reach the
+[TestFlight beta](https://testflight.apple.com/join/e7SdnNEr) first. It needs iOS 17; Browse for Me
+and Summarize run on the iPhone's own Apple Intelligence. Its code is in [`iOS/`](iOS) and its
 status in [docs/ios-parity.md](docs/ios-parity.md).
 
 ## Build from source

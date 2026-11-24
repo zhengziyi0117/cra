@@ -30,9 +30,10 @@
 #     (stalls count from the first command; start-up has its own launchstall budget)
 #   helpers baseline | helpers settle [slack]
 #   renderers <max>             at most that many renderer processes (within 5 s)
-#   relaunch                    cra://debug?relaunch=1, then follow the new process
-#   expect-log <regex>          a line Cra logged (cra.log or stdout), ${WS}'s "ws open" / "ws closed", or a
-#                               request the fixture server answered ("GET /page.html?n=1 HTTP/1.1")
+#   relaunch [<cra:// command>] cra://debug?relaunch=1 (or that command, which restarts Cra), then follow the new
+#                               process
+#   expect-log <regex>          a line Cra logged (cra.log, the engine's chromium.log or stdout), ${WS}'s "ws open" /
+#                               "ws closed", or a request the fixture server answered ("GET /page.html?n=1 HTTP/1.1")
 #   reject-log <regex>          no such line logged so far
 #   snapshot <View[,n]> <name>  the nth visible view of that class drawn to PNG and compared with
 #                               Tests/Snapshots/<name>.png (CRA_SNAPSHOT_RECORD=1 records it)
@@ -55,8 +56,15 @@
 #   click little-close          a real click (through the window server, scripts/hid-click/click.m) on the newest
 #                               Little Window's close button, only if that window is in front there; needs a screen
 #                               (requires screen), as Cra comes forward for it as for a mouse (#659)
+#   click toolbar-empty double  a real double click the same way on the focused page's toolbar where no button is (#685)
+#   click page-top double       the same 5 pt into the focused page's top (#685)
 #   bare-helper <suffix>        runs the engine's "Cra Helper (<suffix>)" with no arguments, as macOS launches the
 #                               Alerts helper for a notification click after it quit; fails unless it exits 0 in 10 s
+#   replace-app [chrome]        Cra.app replaced while Cra runs, as `brew upgrade --greedy` does: a scenario with this
+#                               line runs its own copy of the app (an APFS clone in its output folder), which goes,
+#                               and a copy of it one version on takes its place; with `chrome`, that copy's engine
+#                               is on another Chrome too (Versions/<chrome> moved), so new pages can't start (the
+#                               recorder's "launch failed" then counts as no crash)
 #   requires screen
 #   port <n>                   serve ${PAGE} on a fixed port (snapshots show the address)
 # The fixture server answers an address with ?delay=<s> (or &delay=<s>) that many seconds late, and /auth with an
@@ -71,7 +79,9 @@
 # ${SIDE_PANEL_EXTENSION_ID} (Tests/Fixtures/SidePanelExtension) and ${DOWNLOAD_EXTENSION_ID}
 # (Tests/Fixtures/DownloadExtension) and ${WEB_STORE_COPY_ID} (Tests/Fixtures/WebStoreCopy) and
 # ${TABS_CREATE_EXTENSION_ID} (Tests/Fixtures/TabsCreateExtension) and ${TABS_QUERY_EXTENSION_ID}
-# (Tests/Fixtures/TabsQueryExtension) and ${CAPTURE_EXTENSION_ID} (Tests/Fixtures/CaptureExtension) expand,
+# (Tests/Fixtures/TabsQueryExtension) and ${CAPTURE_EXTENSION_ID} (Tests/Fixtures/CaptureExtension) and
+# ${POPUP_CONTEXT_EXTENSION_ID} (Tests/Fixtures/PopupContextExtension) and ${COMMANDS_EXTENSION_ID}
+# (Tests/Fixtures/CommandsExtension) expand,
 # and ${STALL}, an address on 127.0.0.1 that takes connections and never answers (a download
 # that never ends), and ${TRICKLE}, one that answers with a 10 MB file to save, sends the first
 # 64 KB and holds the rest back (a download that stays in progress).
@@ -89,6 +99,8 @@ STORE_COPY_EXTENSION_ID="$(cat "$FIXTURES/StoreCopyExtension/ID")"
 TABS_CREATE_EXTENSION_ID="$(cat "$FIXTURES/TabsCreateExtension/ID")"
 TABS_QUERY_EXTENSION_ID="$(cat "$FIXTURES/TabsQueryExtension/ID")"
 CAPTURE_EXTENSION_ID="$(cat "$FIXTURES/CaptureExtension/ID")"
+POPUP_CONTEXT_EXTENSION_ID="$(cat "$FIXTURES/PopupContextExtension/ID")"
+COMMANDS_EXTENSION_ID="$(cat "$FIXTURES/CommandsExtension/ID")"
 
 if [ "${1:-}" = "all" ]; then
   # CRA_SCENARIO_SHARD=k/n runs every n-th scenario from the k-th (1-based), so n jobs share the list: one job
@@ -205,6 +217,11 @@ fi
 
 OUT="$ROOT/build/scenarios/$NAME${CRA_FLAGS:+-${CRA_FLAGS//[^a-z]/}}"
 rm -rf "$OUT" && mkdir -p "$OUT"
+# replace-app replaces the app it runs, so that is a copy of the build.
+if grep -q '^replace-app' "$FILE"; then
+  mkdir -p "$OUT/app" && cp -c -R "$APP" "$OUT/app/Cra.app" || { echo "No copy of $APP"; exit 2; }
+  APP="$OUT/app/Cra.app"; EXE="$APP/Contents/MacOS/$(basename "$EXE")"
+fi
 # The physical path: /tmp is a link to /private/tmp, and CEF takes a profile's folder for one
 # outside root_cache_path through it (in-memory storage instead), so spaces on a profile need it.
 # CRA_SCENARIO_DATA keeps the data folder for the next scenario (scripts/engine-migration.sh).
@@ -395,7 +412,7 @@ WS_SERVER=$!
 disown "$WS_SERVER"
 for _ in $(seq 1 50); do WS_PORT=$(head -1 "$OUT/ws.log"); [ -n "$WS_PORT" ] && break; sleep 0.1; done
 WS="ws://127.0.0.1:${WS_PORT:?WebSocket server did not start}"
-expand() { local s="$1"; s="${s//\$\{FIXTURES\}/$FIXTURES}"; s="${s//\$\{ORIGIN\}/$ORIGIN}"; s="${s//\$\{PAGE\}/$PAGE}"; s="${s//\$\{WEBKIT\}/$WEBKIT}"; s="${s//\$\{MUSIC\}/$MUSIC}"; s="${s//\$\{LOCALNET\}/$LOCALNET}"; s="${s//\$\{STALL\}/$STALL}"; s="${s//\$\{TRICKLE\}/$TRICKLE}"; s="${s//\$\{WS\}/$WS}"; s="${s//\$\{COVER\}/${COVER:-}}"; s="${s//\$\{EXTENSION_ID\}/$EXTENSION_ID}"; s="${s//\$\{SIDE_PANEL_EXTENSION_ID\}/$SIDE_PANEL_EXTENSION_ID}"; s="${s//\$\{DOWNLOAD_EXTENSION_ID\}/$DOWNLOAD_EXTENSION_ID}"; s="${s//\$\{WEB_STORE_COPY_ID\}/$WEB_STORE_COPY_ID}"; s="${s//\$\{STORE_COPY_EXTENSION_ID\}/$STORE_COPY_EXTENSION_ID}"; s="${s//\$\{TABS_CREATE_EXTENSION_ID\}/$TABS_CREATE_EXTENSION_ID}"; s="${s//\$\{TABS_QUERY_EXTENSION_ID\}/$TABS_QUERY_EXTENSION_ID}"; s="${s//\$\{CAPTURE_EXTENSION_ID\}/$CAPTURE_EXTENSION_ID}"; printf '%s' "$s"; }
+expand() { local s="$1"; s="${s//\$\{FIXTURES\}/$FIXTURES}"; s="${s//\$\{ORIGIN\}/$ORIGIN}"; s="${s//\$\{PAGE\}/$PAGE}"; s="${s//\$\{WEBKIT\}/$WEBKIT}"; s="${s//\$\{MUSIC\}/$MUSIC}"; s="${s//\$\{LOCALNET\}/$LOCALNET}"; s="${s//\$\{STALL\}/$STALL}"; s="${s//\$\{TRICKLE\}/$TRICKLE}"; s="${s//\$\{WS\}/$WS}"; s="${s//\$\{COVER\}/${COVER:-}}"; s="${s//\$\{EXTENSION_ID\}/$EXTENSION_ID}"; s="${s//\$\{SIDE_PANEL_EXTENSION_ID\}/$SIDE_PANEL_EXTENSION_ID}"; s="${s//\$\{DOWNLOAD_EXTENSION_ID\}/$DOWNLOAD_EXTENSION_ID}"; s="${s//\$\{WEB_STORE_COPY_ID\}/$WEB_STORE_COPY_ID}"; s="${s//\$\{STORE_COPY_EXTENSION_ID\}/$STORE_COPY_EXTENSION_ID}"; s="${s//\$\{TABS_CREATE_EXTENSION_ID\}/$TABS_CREATE_EXTENSION_ID}"; s="${s//\$\{TABS_QUERY_EXTENSION_ID\}/$TABS_QUERY_EXTENSION_ID}"; s="${s//\$\{CAPTURE_EXTENSION_ID\}/$CAPTURE_EXTENSION_ID}"; s="${s//\$\{POPUP_CONTEXT_EXTENSION_ID\}/$POPUP_CONTEXT_EXTENSION_ID}"; s="${s//\$\{COMMANDS_EXTENSION_ID\}/$COMMANDS_EXTENSION_ID}"; printf '%s' "$s"; }
 # AppKit asks "reopen windows?" after a test copy was killed, and that modal blocks every command;
 # Cra restores its own windows from windows.json, so AppKit's restoration is off.
 app_args=(-ApplePersistenceIgnoreState YES)
@@ -486,7 +503,7 @@ while IFS= read -r raw || [ -n "$raw" ]; do
       count_faults
       # The next Cra starts its hitch log afresh: keep this one's.
       { cat "$HITCH" 2>/dev/null; echo "0 relaunch"; } >> "$OUT/hitch.earlier"
-      old="$PID"; send "cra://debug?relaunch=1"
+      old="$PID"; send "${2:-cra://debug?relaunch=1}"
       PID=""
       for _ in $(seq 1 200); do
         p=$(grep -ho 'starts, pid [0-9]*' "$DATA"/cra*.log 2>/dev/null | awk '{print $3}' | grep -vx "$old" | grep -vxF "$(printf '%s\n' "${PIDS[@]}")" | tail -1)
@@ -499,7 +516,8 @@ while IFS= read -r raw || [ -n "$raw" ]; do
       sleep 2 ;;
     expect-log)
       shift; re="$*"; found=""
-      for _ in $(seq 1 150); do grep -Eq "$re" "$DATA"/cra*.log "$OUT/stdout.log" "$OUT/ws.log" "$OUT/server.log" 2>/dev/null && { found=1; break; }; sleep 0.2; done
+      # chromium.log has the engine's own LOG lines (bridge hooks and patches; the app's go to stdout.log).
+      for _ in $(seq 1 150); do grep -Eq "$re" "$DATA"/cra*.log "$DATA/chromium.log" "$OUT/stdout.log" "$OUT/ws.log" "$OUT/server.log" 2>/dev/null && { found=1; break; }; sleep 0.2; done
       [ -n "$found" ] || problem "no log line matching: $re" ;;
     reject-log)
       shift; re="$*"
@@ -538,20 +556,26 @@ while IFS= read -r raw || [ -n "$raw" ]; do
         grep -q '^covering' "$OUT/cover.log" && echo "  $(head -1 "$OUT/cover.log")" || problem "no cover window: $(cat "$OUT/cover.log")"
       fi ;;
     click)
-      [ "${2:-}" = "little-close" ] || { problem "click: unknown target ${2:-}"; continue; }
+      case "${2:-}" in
+        little-close) ask="littleClose=point"; mark="little close point:" ;;
+        toolbar-empty) ask="toolbarDoubleClick=point"; mark="toolbar empty point:" ;;
+        page-top) ask="pageTop=point"; mark="page top point:" ;;
+        *) problem "click: unknown target ${2:-}"; continue ;;
+      esac
+      count=1; [ "${3:-}" = "double" ] && count=2
       [ -x "$OUT/click" ] || clang -fobjc-arc -framework AppKit "$ROOT/scripts/hid-click/click.m" -o "$OUT/click" 2>"$OUT/click-build.log"
       [ -x "$OUT/click" ] || { problem "the click helper did not build (click-build.log)"; continue; }
-      seen=$(cat "$DATA"/cra*.log 2>/dev/null | grep -c "little close point:")
-      send "cra://debug?littleClose=point"
+      seen=$(cat "$DATA"/cra*.log 2>/dev/null | grep -c "$mark")
+      send "cra://debug?$ask"
       xy=""
       for _ in $(seq 1 50); do
-        [ "$(cat "$DATA"/cra*.log 2>/dev/null | grep -c "little close point:")" -gt "$seen" ] && \
-          { xy=$(cat "$DATA"/cra*.log | grep "little close point:" | tail -1 | sed 's/.*little close point: //'); break; }
+        [ "$(cat "$DATA"/cra*.log 2>/dev/null | grep -c "$mark")" -gt "$seen" ] && \
+          { xy=$(cat "$DATA"/cra*.log | grep "$mark" | tail -1 | sed "s/.*$mark //"); break; }
         sleep 0.2
       done
       case "$xy" in
-        [0-9]*" "[0-9]*) out=$("$OUT/click" "$PID" $xy) || problem "click little-close: $out"; echo "  $out" ;;
-        *) problem "click little-close: no close button (${xy:-no answer})" ;;
+        [0-9]*" "[0-9]*) out=$("$OUT/click" "$PID" $xy $count) || problem "click $2: $out"; echo "  $out" ;;
+        *) problem "click $2: nowhere to click (${xy:-no answer})" ;;
       esac ;;
     bare-helper)
       helper="Cra Helper (${line#bare-helper })"
@@ -567,6 +591,23 @@ while IFS= read -r raw || [ -n "$raw" ]; do
           [ "$hs" -eq 0 ] || problem "$helper launched bare exited $hs$([ "$hs" -gt 128 ] && echo " (signal $((hs - 128)))")"
         fi
       fi ;;
+    replace-app)
+      next="$OUT/app-next/Cra.app"
+      rm -rf "$OUT/app-next" && mkdir -p "$OUT/app-next" && cp -c -R "$APP" "$next"
+      plist="$next/Contents/Info.plist"
+      version="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$plist").1"
+      /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $version" -c "Set :CFBundleVersion 999999999999" "$plist"
+      # Its seal covers Info.plist; the app's own signature again (not the engine's), so it starts like the build.
+      # The running copy may carry its picked icon (Icon\r and Finder info, AppIconManager), which codesign refuses.
+      rm -f "$next/Icon"$'\r' && xattr -cr "$next"
+      codesign --force -s - --preserve-metadata=entitlements,flags "$next" >"$OUT/replace-app.log" 2>&1 ||
+        problem "replace-app: codesign failed: $(tail -1 "$OUT/replace-app.log")"
+      if [ "${2:-}" = chrome ]; then
+        versions="$next/Contents/Frameworks/Cra Framework.framework/Versions"
+        mv "$versions/$(readlink "$versions/Current")" "$versions/999.0.0.0" && ln -sfn 999.0.0.0 "$versions/Current"
+      fi
+      rm -rf "$APP" && mv "$next" "$APP"
+      echo "  Cra.app replaced by $version${2:+ on another Chrome}" ;;
     fresh|requires|port|seed|env|arg|extension|profile|home|crash-report) ;;
     *) problem "unknown scenario line: $line" ;;
   esac
@@ -605,7 +646,8 @@ if alive; then
   hitch250=$(cat "$OUT/hitch.earlier" "$HITCH" 2>/dev/null | awk '$2 == "stall" && $3 >= 250 { n++ } END { print n + 0 }')
   if [ ! -s "$OUT/perf.json" ]; then problem "no perf.json from the performance recorder"
   else
-    verdict=$(python3 -I - "$OUT/perf.json" "$PERFCPU" "$hitch250" <<'PY'
+    other_chrome=$(grep -c '^replace-app chrome' "$FILE")
+    verdict=$(python3 -I - "$OUT/perf.json" "$PERFCPU" "$hitch250" "$other_chrome" <<'PY'
 import json, sys
 r = json.load(open(sys.argv[1]))
 cpu, budget, hitch = r["selfCost"]["cpuPct"], float(sys.argv[2]), int(sys.argv[3])
@@ -618,6 +660,8 @@ if abs(seen - hitch) > max(2, hitch // 5): print(f"PROBLEM the recorder counted 
 # What the app does, so never a budget: no scenario crashes a page, and a renderer Cra let go
 # (tab sleep's discard) is no crash either (0.1.44 counted each one).
 ended = r["counters"].get("rendererTerminated", {})
+# A Cra.app replaced by one on another Chrome (replace-app chrome) has no helpers for this copy: that is the case.
+if sys.argv[4] != "0": ended.pop("launch failed", None)
 if ended: print("CRASH pages crashed (“Aw, Snap!”) per the recorder: " + ", ".join(f"{k} ×{n}" for k, n in sorted(ended.items())))
 PY
 )

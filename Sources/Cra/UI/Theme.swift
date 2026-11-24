@@ -99,11 +99,13 @@ extension SpaceTheme {
 
     var palette: SpacePalette {
         let systemDark = SystemAppearance.shared.isDark
+        let forcedDark = SystemAppearance.shared.forcedDark
         let glass = SidebarGlassSetting.shared.isOn
         let theme = resolved(systemDark: systemDark)
-        var p = theme.fixedPalette(lightMaterial: usesLightMaterial(systemDark: systemDark), glass: glass)
+        let lightMaterial = usesLightMaterial(systemDark: systemDark, forcedDark: forcedDark)
+        var p = theme.fixedPalette(lightMaterial: lightMaterial, glass: glass)
         // The glass's own material follows the theme's colours (SidebarGlass), not Arc's light/dark pick.
-        p.lightMaterial = glass ? !theme.isDark : usesLightMaterial(systemDark: systemDark)
+        p.lightMaterial = glass ? !theme.isDark : lightMaterial
         p.darkGradient = !glass && theme.drawnOverDarkGradientMaterial
         p.glass = glass
         return p
@@ -190,6 +192,12 @@ final class SystemAppearance: @unchecked Sendable {
     private(set) var isDark = false
     /// The desktop appearance, independent of Cra's website appearance override.
     private(set) var macOSIsDark = false
+    /// View ▸ Appearance set to Dark (true) or Light (false), nil on Automatic: every space's sidebar
+    /// takes it, as Arc's one appearance setting does (#700).
+    private(set) var forcedDark: Bool?
+
+    /// View ▸ Appearance changed (WebsiteAppearance.forcesDark).
+    @MainActor func setForced(_ dark: Bool?) { if dark != forcedDark { forcedDark = dark } }
     @ObservationIgnored private var observation: NSKeyValueObservation?
 
     @MainActor func start() {
