@@ -165,7 +165,7 @@ private final class SpaceManagerCard: NSView {
         self.store = store
         self.ui = ui
         self.actions = actions
-        let palette = store.space(spaceID).map { store.displayTheme(for: $0).palette } ?? SpaceTheme.presets[0].palette
+        let palette = store.space(spaceID).map { store.displayTheme(for: $0).palette } ?? SpaceTheme.arcDefault.palette
         background = PaletteBackgroundView(palette: palette)
         list = SpaceListView(spaceID: spaceID, store: store, ui: ui, actions: actions, favicons: favicons)
         list.showsNewTab = false

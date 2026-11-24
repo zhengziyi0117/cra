@@ -429,7 +429,7 @@ public struct SidebarDocument: Codable, Equatable {
         let fav = SidebarItem.container(.favorites(spaceID: spaceID))
         let pinned = SidebarItem.container(.pinned(spaceID: spaceID))
         let today = SidebarItem.container(.today(spaceID: spaceID))
-        let space = Space(id: spaceID, title: "Personal", emoji: "🌱", theme: SpaceTheme.presets[0], favoritesContainerID: fav.id,
+        let space = Space(id: spaceID, title: "Personal", emoji: "🌱", theme: .arcDefault, favoritesContainerID: fav.id,
                           pinnedContainerID: pinned.id, todayContainerID: today.id, createdAt: Date())
         return SidebarDocument(spaceOrder: [spaceID], spaces: [space], items: [fav, pinned, today])
     }

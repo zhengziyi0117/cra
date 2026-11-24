@@ -86,10 +86,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         }
         // A tip takes the tones of the space its browser window is in (the sidebar may be a
         // floating panel, a child of that window).
-        ArcTooltipController.shared.tones = { [unowned self] window in
+        ArcTooltipController.shared.theme = { [unowned self] window in
             var w: NSWindow? = window
             while let x = w {
-                if let m = mainWindows.first(where: { $0.window === x }) { return TooltipTones(theme: m.focusedTheme) }
+                if let m = mainWindows.first(where: { $0.window === x }) { return m.focusedTheme }
+                if let little = littleWindows.first(where: { $0.window === x }) { return little.displayTheme }
                 w = x.parent
             }
             return nil
@@ -4026,7 +4027,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         copy(CraVersion.line(short: info?["CFBundleShortVersionString"] as? String ?? "dev",
                              build: info?["CFBundleVersion"] as? String ?? "",
                              engine: EngineVersion.label(chromium: CraCEFRuntime.chromiumVersion(), cef: CraCEFRuntime.cefVersion())))
-        settingsController?.showToast("Cra version copied to clipboard", colors: ShinyToast.colors(main.focusedTheme))
+        settingsController?.showToast("Cra version copied to clipboard", theme: main.focusedTheme)
     }
 
     private func copy(_ s: String) {

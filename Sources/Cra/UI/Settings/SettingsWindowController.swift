@@ -68,11 +68,11 @@ final class SettingsWindowController: NSWindowController {
     private let toast = ShinyToast()
 
     /// Cra's one toast, over the top right of the pane below the tabs, as a browser window shows it over the page.
-    func showToast(_ text: String, colors: ShinyToast.Colors) {
+    func showToast(_ text: String, theme: SpaceTheme) {
         guard let window, let content = window.contentView else { return }
         var pane = content.convert(content.bounds, to: nil)
         pane.size.height -= SettingsMetrics.tabBarTop + SettingsMetrics.tabBarHeight + 1
-        toast.show(text, page: pane, in: window, colors: colors)
+        toast.show(text, page: pane, in: window, theme: theme)
     }
 
     func show(_ tab: SettingsTab) { nav.show(tab) }

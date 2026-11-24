@@ -94,7 +94,7 @@ public struct SpaceTheme: Codable, Equatable {
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        colors = try c.decodeIfPresent([String].self, forKey: .colors) ?? ["#1C242B", "#3A3660"]
+        colors = try c.decodeIfPresent([String].self, forKey: .colors) ?? []
         intensity = try c.decodeIfPresent(Double.self, forKey: .intensity) ?? 0.8
         noise = try c.decodeIfPresent(Double.self, forKey: .noise) ?? 0.15
         appearance = try c.decodeIfPresent(String.self, forKey: .appearance) ?? "auto"
@@ -106,6 +106,12 @@ public struct SpaceTheme: Codable, Equatable {
         key = try c.decodeIfPresent([String].self, forKey: .key)
         // A wheel this Cra doesn't know falls back to the colours' own, not a failed sidebar.json.
         wheel = (try? c.decodeIfPresent(SpaceThemeWheel.self, forKey: .wheel)) ?? nil
+        if colors.isEmpty {
+            let fallback = SpaceThemeVariants.colourless(intensity: intensity, noise: noise, appearance: appearance)
+            colors = fallback.colors
+            accent = accent ?? fallback.accent
+            dark = dark ?? fallback.dark
+        }
     }
 
     var variant: Variant {
@@ -156,6 +162,8 @@ public struct SpaceTheme: Codable, Equatable {
         default: return !systemDark
         }
     }
+
+    public static let arcDefault = SpaceThemeVariants.colourless(intensity: 1, noise: 0, appearance: "auto")
 
     /// Dark first: colors borrowed from Victor's other projects (GhostWriter
     /// ink + brand purple, Spook's "wall" browns, Phantom's greys, moss, gold,

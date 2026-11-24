@@ -668,6 +668,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, BrowserM
         // The material too: View ▸ Appearance picks it for every space without changing the theme (#700).
         if shownTheme != theme.shown || shownGlass != palette.glass || shownLightMaterial != palette.lightMaterial {
             shownTheme = theme.shown
+            toast.updateColors(SpaceChromeColors(palette))
             shownGlass = palette.glass
             shownLightMaterial = palette.lightMaterial
             // A swipe in the floating sidebar changes space under it (issue #12).
@@ -3501,7 +3502,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, BrowserM
     private func installFloatingSidebar() {
         guard let window, floatingSidebar == nil else { return }
         let f = FloatingSidebarController(shell: shell, window: window, palette: { [weak self] in
-            self?.focusedTheme.palette ?? SpaceTheme.presets[0].palette
+            self?.focusedTheme.palette ?? SpaceTheme.arcDefault.palette
         })
         // Also over a page in full screen, where the sidebar is out of sight (#315).
         f.sidebarHidden = { [weak self] in
@@ -4220,7 +4221,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, BrowserM
         commandBar.close()
         let origin = focusedSpaceID
         // Arc starts the page on the profile of the space it was opened from.
-        let draft = SpaceCreationDraft(theme: SpaceColorPresets.newSpaceTheme(),
+        let draft = SpaceCreationDraft(theme: .arcDefault,
                                        profile: SpaceProfiles.forNewSpace(from: store.focusedSpace, profiles: store.profiles))
         creationOrigin = origin
         creationDone = created

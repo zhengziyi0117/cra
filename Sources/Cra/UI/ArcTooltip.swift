@@ -31,10 +31,8 @@ final class ArcTooltipController {
     /// next one waits for the pointer to rest the full delay.
     var paused = false { didSet { if paused { dismiss() } } }
 
-    /// The tones of the space a window is in (AppDelegate). Arc paints every tip in a browser
-    /// window from that space's palette, whichever control or space icon it belongs to; windows
-    /// without a space (Little Windows) get nil and use the Little Window palette.
-    var tones: (NSWindow) -> TooltipTones? = { _ in nil }
+    /// Includes child panels and Little Windows, each with its own target space.
+    var theme: (NSWindow) -> SpaceTheme? = { _ in nil }
 
     private init() {
         clickMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown, .keyDown]) { [weak self] e in
@@ -152,7 +150,7 @@ final class ArcTooltipController {
         guard !Self.blockedBySheet(window) else { return }
         let p = LittleTooltipPanel()
         let option = NSEvent.modifierFlags.contains(.option) ? view.optionText : nil
-        let colors = tones(window).map(ArcTooltipLabel.Colors.init) ?? .little
+        let colors = theme(window).map { ArcTooltipLabel.Colors(SpaceChromeColors($0.palette)) } ?? .system
         let label = ArcTooltipLabel(text: option ?? view.text, keys: option == nil ? view.keys : [],
                                     subtitle: option == nil ? view.subtitle : nil, badge: option == nil ? view.badge : nil,
                                     colors: colors)
@@ -406,16 +404,14 @@ final class ArcTooltipLabel: NSView {
             (self.fill, self.title, self.cap, self.capGlyph, self.capEdge) = (fill, title, cap, capGlyph, capEdge)
         }
 
-        init(_ t: TooltipTones) {
-            self.init(fill: NSColor(t.fill), title: NSColor(t.title), cap: NSColor(t.badge), capGlyph: NSColor(t.ink),
-                      capEdge: NSColor(t.badge.mixed(with: t.ink, 0.5)))
+        init(_ colors: SpaceChromeColors) {
+            self.init(fill: colors.surface, title: colors.text, cap: colors.pill, capGlyph: colors.text, capEdge: colors.outline)
         }
 
-        /// Little Arc's tip, whatever space is focused.
-        static var little: Colors {
-            let palette = LittlePalette.current
-            return Colors(fill: palette.tooltip, title: palette.tooltipText, cap: palette.tooltipCap,
-                          capGlyph: palette.tooltipCapGlyph, capEdge: palette.tooltipBorder)
+        /// Tips shown outside a browser window follow macOS.
+        static var system: Colors {
+            Colors(fill: .windowBackgroundColor, title: .labelColor, cap: .controlBackgroundColor,
+                   capGlyph: .labelColor, capEdge: .separatorColor)
         }
     }
 
@@ -429,7 +425,7 @@ final class ArcTooltipLabel: NSView {
     private var pill: ProfilePill?
     private let multiline: Bool
 
-    init(text: String, keys: [String], subtitle: String? = nil, badge: String? = nil, colors: Colors = .little) {
+    init(text: String, keys: [String], subtitle: String? = nil, badge: String? = nil, colors: Colors = .system) {
         let wraps = Self.width(of: text) > Self.maxTextWidth
         multiline = wraps || subtitle != nil
         super.init(frame: .zero)

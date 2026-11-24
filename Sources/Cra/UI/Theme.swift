@@ -56,6 +56,29 @@ struct SpacePalette {
     }
 }
 
+/// Opaque surfaces drawn over page content use the space gradient over its material's ground.
+struct SpaceChromeColors: Equatable {
+    let isDark: Bool
+    let gradient: [NSColor]
+    let text, outline, pill, hover: NSColor
+    var surface: NSColor { gradient[0] }
+
+    @MainActor
+    init(_ palette: SpacePalette) {
+        isDark = palette.isDark
+        let base = palette.glass ? SidebarGlass.ground(dark: palette.isDark) : palette.lightMaterial ? 0.75 : 0.2
+        let ground = NSColor(srgbRed: base, green: base, blue: base, alpha: 1)
+        gradient = SpaceBackground.stops(palette).map { stop in
+            let color = stop.color.withAlphaComponent(1)
+            return stop.color.alphaComponent == 1 ? color : ground.blended(withFraction: stop.color.alphaComponent, of: color) ?? color
+        }
+        text = NSColor(palette.textPrimary)
+        outline = text.withAlphaComponent(0.24)
+        pill = NSColor(palette.pillFill)
+        hover = NSColor(palette.pillHoverFill)
+    }
+}
+
 extension SpaceTheme {
     static func blend(_ a: String, _ b: String, _ t: Double) -> Color {
         let x = HexColor.components(a) ?? (0.5, 0.5, 0.5), y = HexColor.components(b) ?? (0.5, 0.5, 0.5)

@@ -178,16 +178,17 @@ final class CommandBarView: NSView {
         info.contentTintColor = dark ? NSColor.white.withAlphaComponent(0.55) : NSColor.labelColor.withAlphaComponent(0.55)
         border.strokeColor = NSColor.labelColor.withAlphaComponent(dark ? 0.12 : 0.08).cgColor
         divider.layer?.backgroundColor = NSColor.labelColor.withAlphaComponent(0.08).cgColor
-        // The card's bar is Little Arc's own: opaque, a light hairline round it, a ✕ tile (Arc 1.172.1, #337).
-        material.isHidden = card != nil
+        // Both the standalone card and the address editor belong to the Little Window's space.
+        let little = c.window == .littleWindow
+        material.isHidden = little
         closeTile.isHidden = card == nil
-        if card != nil {
-            let palette = LittlePalette.current
-            tint.layer?.backgroundColor = palette.cardBar.cgColor
-            border.strokeColor = palette.cardBarBorder.cgColor
-            divider.layer?.backgroundColor = palette.cardDivider.cgColor
-            closeTile.layer?.backgroundColor = palette.cardClose.cgColor
-            closeTile.contentTintColor = palette.cardCloseGlyph
+        if little, let theme = c.theme {
+            let colors = SpaceChromeColors(theme.palette)
+            tint.layer?.backgroundColor = colors.surface.cgColor
+            border.strokeColor = colors.outline.cgColor
+            divider.layer?.backgroundColor = colors.outline.cgColor
+            closeTile.layer?.backgroundColor = colors.pill.cgColor
+            closeTile.contentTintColor = colors.text
         }
         let scope = c.scope
         if c.isOpen, (scope == nil) != (shownScope == nil) {

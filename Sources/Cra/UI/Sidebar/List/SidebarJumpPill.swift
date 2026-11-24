@@ -2,13 +2,10 @@ import AppKit
 
 /// Dia's "back to the open tab" pill (TabList.TabOverflowIndicatorView, its geometry from
 /// TabOverflowGeometryTracker): while the selected tab's row is scrolled out of the list, a
-/// dark capsule with its favicon and an arrow pointing at it sits 7 pt inside the list edge
+/// capsule with its favicon and an arrow pointing at it sits 7 pt inside the list edge
 /// the tab is past. A click scrolls the tab to the middle of the list.
 ///
-/// Measured on a Dia capture (2x): a 51 × 28 pt capsule, fill #1F1C1C, a 0.5 pt light inner
-/// edge (~10 % white) inside a 0.5 pt dark outer edge (~45 % black), no larger shadow;
-/// 10.5 pt in, the 16 pt favicon, 7 pt, a thin 9 pt arrow in #ADACAC, 10.5 pt out. A split
-/// shows its tabs' favicons as a small facepile (Dia's `facepile`).
+/// Splits show their favicons overlapping. The capsule takes the space colour at its list edge.
 @MainActor
 final class SidebarJumpPill: NSView {
     enum Edge { case top, bottom }
@@ -19,8 +16,11 @@ final class SidebarJumpPill: NSView {
     private static let icon: CGFloat = 16
     /// Each further favicon of a split overlaps the one before by this much.
     private static let overlap: CGFloat = 5
-    private static let fill = NSColor(srgbRed: 0x1F / 255, green: 0x1C / 255, blue: 0x1C / 255, alpha: 1)
-    private static let fillHover = NSColor(srgbRed: 0x2A / 255, green: 0x27 / 255, blue: 0x27 / 255, alpha: 1)
+    private var colors = SidebarColors()
+    private var surface = NSColor.windowBackgroundColor
+    private var fill: NSColor {
+        surface.blended(withFraction: hovering ? 0.14 : 0.05, of: colors.textPrimary.withAlphaComponent(1)) ?? surface
+    }
 
     var onClick: () -> Void = {}
     private(set) var edge: Edge?
@@ -41,15 +41,12 @@ final class SidebarJumpPill: NSView {
             l.cornerRadius = Self.height / 2
             l.cornerCurve = .continuous
             l.borderWidth = 0.5
-            l.borderColor = NSColor.black.withAlphaComponent(0.45).cgColor
             innerEdge.fillColor = nil
-            innerEdge.strokeColor = NSColor.white.withAlphaComponent(0.1).cgColor
             innerEdge.lineWidth = 0.5
             l.addSublayer(innerEdge)
         }
         addSubview(body)
         arrow.imageScaling = .scaleNone
-        arrow.contentTintColor = NSColor(srgbRed: 0xAD / 255, green: 0xAC / 255, blue: 0xAC / 255, alpha: 1)
         body.addSubview(arrow)
         setAccessibilityRole(.button)
         setAccessibilityLabel("Scroll to the open tab")
@@ -68,9 +65,19 @@ final class SidebarJumpPill: NSView {
     }
 
     /// Shows the pill at `edge` with these favicons, or hides it (nil).
-    func show(edge newEdge: Edge?, icons items: [(image: NSImage?, flip: Bool, key: String?)], animated: Bool) {
+    func show(edge newEdge: Edge?, icons items: [(image: NSImage?, flip: Bool, key: String?)], colors: SidebarColors,
+              surface: NSColor, animated: Bool) {
         if let newEdge {
-            if Self.signature(items) != shownIcons { setIcons(items) }
+            let recolor = self.colors != colors
+            self.colors = colors
+            if newEdge != edge || self.surface != surface || recolor {
+                self.surface = surface
+                body.layer?.borderColor = colors.textPrimary.withAlphaComponent(0.24).cgColor
+                innerEdge.strokeColor = colors.separator.cgColor
+                arrow.contentTintColor = colors.textPrimary
+                refreshFill()
+            }
+            if recolor || Self.signature(items) != shownIcons { setIcons(items) }
             arrow.image = SidebarSymbols.image(newEdge == .top ? "arrow.up" : "arrow.down", size: 10.5, weight: .light)
         }
         guard newEdge != edge else { return }
@@ -114,13 +121,9 @@ final class SidebarJumpPill: NSView {
 
     private func setIcons(_ items: [(image: NSImage?, flip: Bool, key: String?)]) {
         icons.forEach { $0.removeFromSuperview() }
-        // Mono glyphs flip to white on the dark pill.
-        var dark = SidebarColors()
-        dark.isDark = true
-        dark.textTertiary = NSColor.white.withAlphaComponent(0.5)
         icons = items.prefix(3).map { item in
             let v = SidebarFaviconView(size: Self.icon)
-            v.show(item.image, flip: item.flip, colors: dark)
+            v.show(item.image, flip: item.flip, colors: colors)
             body.addSubview(v)
             return v
         }
@@ -135,9 +138,9 @@ final class SidebarJumpPill: NSView {
     }
 
     private func refreshFill() {
-        body.layer?.backgroundColor = (hovering ? Self.fillHover : Self.fill).cgColor
+        body.layer?.backgroundColor = fill.cgColor
         for v in icons.dropFirst() {
-            v.layer?.borderColor = (hovering ? Self.fillHover : Self.fill).cgColor
+            v.layer?.borderColor = fill.cgColor
         }
     }
 
@@ -154,7 +157,7 @@ final class SidebarJumpPill: NSView {
             v.frame = NSRect(x: x, y: (bounds.height - Self.icon) / 2, width: Self.icon, height: Self.icon)
             if i > 0 {
                 v.layer?.borderWidth = 1.5
-                v.layer?.borderColor = (hovering ? Self.fillHover : Self.fill).cgColor
+                v.layer?.borderColor = fill.cgColor
             }
             x += Self.icon - Self.overlap
         }

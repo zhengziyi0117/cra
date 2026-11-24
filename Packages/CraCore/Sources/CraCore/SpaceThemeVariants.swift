@@ -45,7 +45,7 @@ public enum SpaceThemeVariants {
     public static func uniform(color: String?, systemDark: Bool) -> SpaceTheme {
         let appearance = systemDark ? "dark" : "light"
         guard let color, let luminance = HexColor.luminance(color) else {
-            return colourless(intensity: 1, noise: 0, appearance: appearance)
+            return SpaceTheme.arcDefault.resolved(systemDark: systemDark)
         }
         let tone = (luminance < 0.45) == systemDark ? color : shade(color, lightness: systemDark ? 0.2 : 0.85)
         return SpaceTheme(colors: [tone, tone], intensity: 1, noise: 0, appearance: appearance, accent: tone)

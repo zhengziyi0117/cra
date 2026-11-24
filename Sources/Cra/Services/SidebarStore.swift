@@ -2745,7 +2745,7 @@ final class SidebarStore {
         items[favorites.id] = favorites
         items[pinned.id] = pinned
         items[today.id] = today
-        let t = theme ?? SpaceTheme.presets[spaceOrder.count % SpaceTheme.presets.count]
+        let t = theme ?? .arcDefault
         let space = Space(id: id, title: title, emoji: emoji, theme: t, favoritesContainerID: favorites.id,
                           pinnedContainerID: pinned.id, todayContainerID: today.id, createdAt: clock.now, symbol: symbol, iconImage: iconImage)
         spaces[id] = space

@@ -85,44 +85,6 @@ enum LittleMetrics {
     static let openDuration: TimeInterval = 0.12
 }
 
-/// Concrete colours for Little Window's layers, selected independently of the website appearance.
-struct LittlePalette {
-    static let light = LittlePalette(dark: false)
-    static let dark = LittlePalette(dark: true)
-    static var current: Self { SystemAppearance.shared.macOSIsDark ? dark : light }
-
-    let bar, button, border, hover, badge, pill, pillHover: NSColor
-    let cardBar, cardBarBorder, cardDivider, cardClose, cardCloseGlyph, cardTopLeft, cardBottomRight: NSColor
-    let tooltip, tooltipText, tooltipBorder, tooltipCap, tooltipCapGlyph: NSColor
-    let toast: ShinyToast.Colors
-    static let insecure = NSColor(hex: "#E93700")
-
-    private init(dark: Bool) {
-        func color(_ light: String, _ night: String) -> NSColor { NSColor(hex: dark ? night : light) }
-        bar = NSColor(dark ? LittleStripTones.stripLeft : LittleStripTones.lightLeft)
-        button = color("#FCFBFD", "#050625")
-        border = color("#D8D6DE", "#1D1E37")
-        hover = color("#E5E3EB", "#161734")
-        badge = color("#ECEBF0", "#171832")
-        pill = (dark ? NSColor.white : .black).withAlphaComponent(dark ? 0.09 : 0.045)
-        pillHover = (dark ? NSColor.white : .black).withAlphaComponent(dark ? 0.14 : 0.08)
-        cardBar = color("#FAFAFC", "#15141C")
-        cardBarBorder = color("#D4D3D9", "#4B4A50")
-        cardDivider = color("#E1E0E5", "#2C2B32")
-        cardClose = color("#E9E8EC", "#28262D")
-        cardCloseGlyph = color("#59575F", "#9C9A9E")
-        cardTopLeft = color("#F7F7FB", "#0D0B1B")
-        cardBottomRight = color("#EEECF2", "#1C0A20")
-        tooltip = color("#FAF9FD", "#0A0D4B")
-        tooltipText = color("#2C2937", "#DEDFFD")
-        tooltipBorder = color("#D9D6E1", "#22255D")
-        tooltipCap = color("#E9E6EF", "#D3D4FD")
-        tooltipCapGlyph = color("#443D70", "#282EFC")
-        toast = (color("#FAF9FD", "#29124D"), color("#F6F4F9", "#21103D"),
-                 color("#F2EFF6", "#210E42"), dark ? .white : .black)
-    }
-}
-
 @MainActor
 final class LittleWindowController: NSWindowController, NSWindowDelegate, @preconcurrency CraBrowserDelegate {
     unowned let app: AppDelegate
@@ -333,15 +295,20 @@ final class LittleWindowController: NSWindowController, NSWindowDelegate, @preco
         commandHost = CommandBarView(controller: commandBar, favicons: app.favicons)
         commandPanel.contentView = commandHost
         commandPanel.delegate = self
-        observeChanges(of: { [weak window] in window == nil ? nil : SystemAppearance.shared.macOSIsDark }) { [weak self] dark in
-            guard let self, let dark, let window = self.window else { return }
-            let appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
+        observeChanges(of: { [weak self] in
+            self.map { $0.peekParent?.focusedSpaceID ?? $0.store.focusedSpaceID(window: $0.store.lastNormalWindowID) }
+        }) { [weak self] _ in self?.refreshTarget() }
+        observeChanges(of: { [weak self] in self.map { SpaceChromeColors($0.displayTheme.palette) } }) { [weak self] colors in
+            guard let self, let colors, let window = self.window else { return }
+            let appearance = NSAppearance(named: colors.isDark ? .darkAqua : .aqua)
             window.appearance = appearance
             self.commandPanel.appearance = appearance
+            self.commandBar.theme = self.displayTheme
             self.popup?.appearance = appearance
-            if !self.isPeek { window.backgroundColor = LittlePalette.current.bar }
-            self.shell.applyPalette()
-            (self.popup?.contentView as? LittleSpacesPopup)?.applyPalette()
+            if !self.isPeek { window.backgroundColor = colors.surface }
+            self.shell.applyPalette(colors)
+            (self.popup?.contentView as? LittleSpacesPopup)?.applyPalette(colors)
+            self.toast.updateColors(colors)
             self.hideTooltip()
         }
         commandBar.onCommit = { [weak self] s, typed, mode in self?.handleCommit(s, typed: typed, mode: mode) }
@@ -1252,7 +1219,7 @@ final class LittleWindowController: NSWindowController, NSWindowDelegate, @preco
         let prefill = hasPage ? currentURL : nil
         // Suggestions come from the normal profile even when an incognito window was in front.
         app.useNormalWindow()
-        commandBar.theme = store.focusedTheme().shown
+        commandBar.theme = displayTheme
         commandBar.focusedSpaceID = store.focusedSpaceID
         commandBar.spaceShown = isPeek ? nil : state.targetSpaceID
         commandBar.window = isPeek ? .peek : .littleWindow
@@ -1555,7 +1522,7 @@ final class LittleWindowController: NSWindowController, NSWindowDelegate, @preco
         guard let window, state.hover == h, popup == nil, !commandBar.isOpen else { return }
         let panel = LittleTooltipPanel()
         panel.appearance = window.appearance
-        let tip = LittleTooltipView(text: text, caps: caps)
+        let tip = LittleTooltipView(text: text, caps: caps, colors: SpaceChromeColors(displayTheme.palette))
         let size = tip.frame.size
         panel.contentView = tip
         let w = window.frame.width
@@ -1627,6 +1594,7 @@ final class LittleWindowController: NSWindowController, NSWindowDelegate, @preco
 
     /// The space the "Open in" button names, and Tabs ▸ "Open in <space>" with it (TabsMenu).
     var openInSpace: Space { store.space(state.targetSpaceID) ?? store.focusedSpace }
+    var displayTheme: SpaceTheme { store.displayTheme(for: openInSpace).shown }
 
     /// Move the page into a space (nil = the window's target space) as a Today
     /// tab, in the window already showing that space if there is one (Arc). The
@@ -1833,7 +1801,7 @@ final class LittleWindowController: NSWindowController, NSWindowDelegate, @preco
         guard let window, let content = window.contentView else { return }
         slowResponseShown = false
         toast.show(text, keyCap: keyCap, action: action, page: content.convert(content.bounds, to: nil), in: window,
-                   colors: LittlePalette.current.toast)
+                   theme: displayTheme)
     }
 
     /// The Peek's user closes (its Close button, ⌘W, Esc, a click outside) go through here. A Peek on
@@ -2148,7 +2116,7 @@ final class LittleWindowController: NSWindowController, NSWindowDelegate, @preco
                            CraLog.note("Little Window: page \(host) stopped from the notice")
                            browser?.stopLoading()
                        },
-                       page: content.convert(content.bounds, to: nil), in: window, colors: LittlePalette.current.toast,
+                       page: content.convert(content.bounds, to: nil), in: window, theme: displayTheme,
                        onClose: { [weak self] in
                            self?.slowResponse.close()
                            self?.slowResponseShown = false
@@ -2631,7 +2599,6 @@ final class LittleShellView: NSView {
     override init(frame: NSRect) {
         super.init(frame: frame)
         wantsLayer = true
-        applyPalette()
         // Top left to bottom right (the layer's y runs up).
         cardBackground.startPoint = CGPoint(x: 0, y: 1)
         cardBackground.endPoint = CGPoint(x: 1, y: 0)
@@ -2649,10 +2616,9 @@ final class LittleShellView: NSView {
 
     required init?(coder: NSCoder) { fatalError() }
 
-    func applyPalette() {
-        let palette = LittlePalette.current
-        layer?.backgroundColor = palette.bar.cgColor
-        cardBackground.colors = [palette.cardTopLeft.cgColor, palette.cardBottomRight.cgColor]
+    func applyPalette(_ colors: SpaceChromeColors) {
+        layer?.backgroundColor = colors.surface.cgColor
+        cardBackground.colors = colors.gradient.map(\.cgColor)
     }
 
     func setPeekBar(_ bar: PeekBarView) {
@@ -2928,7 +2894,7 @@ final class LittleTooltipPanel: NSPanel {
 
 /// A 28 pt hover tip with 14 pt semibold text and 20 pt key caps.
 final class LittleTooltipView: NSView {
-    init(text: String, caps: [String]) {
+    init(text: String, caps: [String], colors: SpaceChromeColors) {
         super.init(frame: .zero)
         let font = NSFont.systemFont(ofSize: 14, weight: .semibold)
         let textW = ceil((text as NSString).size(withAttributes: [.font: font]).width)
@@ -2938,27 +2904,27 @@ final class LittleTooltipView: NSView {
         setFrameSize(NSSize(width: pillW + 4, height: 32))
         let pill = NSView(frame: NSRect(x: 2, y: 2, width: pillW, height: 28))
         pill.wantsLayer = true
-        pill.layer?.backgroundColor = LittlePalette.current.tooltip.cgColor
+        pill.layer?.backgroundColor = colors.surface.cgColor
         pill.layer?.cornerRadius = 10
         pill.layer?.cornerCurve = .continuous
         pill.layer?.borderWidth = 1
-        pill.layer?.borderColor = LittlePalette.current.tooltipBorder.cgColor
+        pill.layer?.borderColor = colors.outline.cgColor
         addSubview(pill)
         let label = NSTextField.sidebarLabel(size: 14, weight: .semibold)
         label.stringValue = text
-        label.textColor = LittlePalette.current.tooltipText
+        label.textColor = colors.text
         label.frame = NSRect(x: 10 - SidebarText.inset, y: (28 - 17) / 2, width: textW + 2 * SidebarText.inset, height: 17)
         pill.addSubview(label)
         var x = 10 + textW + 6 + 2
         for c in caps {
             let cap = NSView(frame: NSRect(x: x, y: 4, width: 20, height: 20))
             cap.wantsLayer = true
-            cap.layer?.backgroundColor = LittlePalette.current.tooltipCap.cgColor
+            cap.layer?.backgroundColor = colors.pill.cgColor
             cap.layer?.cornerRadius = 5
             cap.layer?.cornerCurve = .continuous
             let glyph = NSTextField.sidebarLabel(size: 12, weight: .semibold)
             glyph.stringValue = c
-            glyph.textColor = LittlePalette.current.tooltipCapGlyph
+            glyph.textColor = colors.text
             glyph.alignment = .center
             glyph.frame = NSRect(x: -SidebarText.inset, y: (20 - 15) / 2, width: 20 + 2 * SidebarText.inset, height: 15)
             cap.addSubview(glyph)
@@ -3089,19 +3055,19 @@ final class LittleToolbarView: NSView {
     override var isFlipped: Bool { true }
 
     private func observe() {
-        let (url, hover, popupOpen, space, theme, spaces, profile, waiting, dark) = withObservationTracking {
+        let (url, hover, popupOpen, space, palette, spaces, profile, waiting) = withObservationTracking {
             let space = store.space(state.targetSpaceID) ?? store.focusedSpace
-            return (state.url, state.hover, state.popupOpen, space, store.displayTheme(for: space), store.spaceOrder.count,
+            return (state.url, state.hover, state.popupOpen, space, store.displayTheme(for: space).palette, store.spaceOrder.count,
              // Arc's shouldShowProfileIndicators: only once there is a profile besides Default.
-             store.profiles.isEmpty ? nil : store.profileName(state.profileID), state.awaitsFirstResponse, SystemAppearance.shared.macOSIsDark)
+             store.profiles.isEmpty ? nil : store.profileName(state.profileID), state.awaitsFirstResponse)
         } onChange: { [weak self] in
             Task { @MainActor in self?.observe() }
         }
-        let palette = dark ? LittlePalette.dark : .light
-        openButton.layer?.backgroundColor = palette.button.cgColor
-        openButton.layer?.borderColor = palette.border.cgColor
-        badge.layer?.backgroundColor = palette.badge.cgColor
-        divider.layer?.backgroundColor = palette.border.cgColor
+        let colors = SpaceChromeColors(palette)
+        openButton.layer?.backgroundColor = colors.pill.cgColor
+        openButton.layer?.borderColor = colors.outline.cgColor
+        badge.layer?.backgroundColor = colors.pill.cgColor
+        divider.layer?.backgroundColor = colors.outline.cgColor
         let chevronShown = LittleMoveMenu.showsChevron(spaces: spaces)
         if state.showsChevron != chevronShown { state.showsChevron = chevronShown }
         divider.isHidden = !chevronShown
@@ -3111,37 +3077,38 @@ final class LittleToolbarView: NSView {
         // Arc keeps the magnifier while a first response is awaited.
         showSecurity(insecure: !waiting && LittleAddress.isInsecure(url))
         pill.toolTip = url
-        pill.layer?.backgroundColor = (hover == .pill ? palette.pillHover : palette.pill).cgColor
-        puzzle.hovered = hover == .puzzle
-        link.hovered = hover == .link
+        pill.layer?.backgroundColor = (hover == .pill ? colors.hover : colors.pill).cgColor
+        puzzle.update(hovered: hover == .puzzle, colors: colors)
+        link.update(hovered: hover == .link, colors: colors)
         profileChip.isHidden = profile == nil
         profileChip.name = profile ?? ""
-        profileChip.hovered = hover == .profile
-        let tones = LittleStripTones(target: theme, systemDark: dark)
+        profileChip.update(hovered: hover == .profile, colors: colors)
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        gradient.colors = [NSColor(tones.left).cgColor, NSColor(tones.right).cgColor]
+        gradient.colors = colors.gradient.map(\.cgColor)
         CATransaction.commit()
         let openTitle = SpaceMenuTitle.named(space.title, prefix: "Open in ")
         let text = NSMutableAttributedString(string: "Open in ", attributes: [.font: NSFont.systemFont(ofSize: 13, weight: .medium),
                                                                              .foregroundColor: NSColor.secondaryLabelColor])
         text.append(NSAttributedString(string: openTitle.displayedName, attributes: [.font: NSFont.systemFont(ofSize: 13, weight: .bold),
-                                                                         .foregroundColor: NSColor(tones.spaceName)]))
+                                                                         .foregroundColor: colors.text]))
         openLabel.attributedStringValue = text
         openButton.toolTip = "Open this page in \(space.title) as a tab (⌘O)"
-        openPart.layer?.backgroundColor = hover == .open ? palette.hover.cgColor : nil
-        chevronPart.layer?.backgroundColor = hover == .chevron ? palette.hover.cgColor : nil
+        openPart.layer?.backgroundColor = hover == .open ? colors.hover.cgColor : nil
+        chevronPart.layer?.backgroundColor = hover == .chevron ? colors.hover.cgColor : nil
         chevron.image = SidebarSymbols.image(popupOpen ? "chevron.up" : "chevron.down", size: 10, weight: .bold)
         needsLayout = true
     }
 
     /// The pill starts with a magnifier; a page that isn't served over https gets Arc's open padlock
     /// instead, orange on a pale orange tile (#330).
+    private static let insecureColor = NSColor(hex: "#E93700")
+
     private func showSecurity(insecure: Bool) {
         isInsecure = insecure
-        search.layer?.backgroundColor = insecure ? LittlePalette.insecure.withAlphaComponent(0.10).cgColor : nil
+        search.layer?.backgroundColor = insecure ? Self.insecureColor.withAlphaComponent(0.10).cgColor : nil
         search.image = SidebarSymbols.image(insecure ? "lock.open" : "magnifyingglass", size: 13, weight: .medium)
-        search.contentTintColor = insecure ? LittlePalette.insecure : NSColor.secondaryLabelColor
+        search.contentTintColor = insecure ? Self.insecureColor : NSColor.secondaryLabelColor
     }
 
     override func layout() {
@@ -3247,14 +3214,12 @@ final class LittleProfileChip: NSView {
     private let chevron = NSImageView()
     private static let font = NSFont.systemFont(ofSize: 11, weight: .medium)
     var name = "" { didSet { if name != oldValue { label.stringValue = name; needsLayout = true } } }
-    var hovered = false {
-        didSet {
-            layer?.backgroundColor = (hovered ? LittlePalette.current.pillHover : LittlePalette.current.pill).cgColor
-            let ink: NSColor = hovered ? .labelColor : .secondaryLabelColor
-            label.textColor = ink
-            face.ink = ink
-            chevron.contentTintColor = ink
-        }
+    func update(hovered: Bool, colors: SpaceChromeColors) {
+        layer?.backgroundColor = (hovered ? colors.hover : colors.pill).cgColor
+        let ink: NSColor = hovered ? .labelColor : .secondaryLabelColor
+        label.textColor = ink
+        face.ink = ink
+        chevron.contentTintColor = ink
     }
 
     var fittingWidth: CGFloat {
@@ -3273,7 +3238,6 @@ final class LittleProfileChip: NSView {
         addSubview(face)
         addSubview(label)
         addSubview(chevron)
-        hovered = false
     }
 
     required init?(coder: NSCoder) { fatalError() }
@@ -3293,11 +3257,9 @@ final class LittleProfileChip: NSView {
 /// Icon in the pill: 26pt hover square, brighter glyph.
 private final class LittleIconView: NSView {
     private let glyph = NSImageView()
-    var hovered = false {
-        didSet {
-            glyph.contentTintColor = hovered ? .labelColor : .secondaryLabelColor
-            layer?.backgroundColor = hovered ? LittlePalette.current.hover.cgColor : nil
-        }
+    func update(hovered: Bool, colors: SpaceChromeColors) {
+        glyph.contentTintColor = hovered ? .labelColor : .secondaryLabelColor
+        layer?.backgroundColor = hovered ? colors.hover.cgColor : nil
     }
 
     init(symbol: String, size: CGFloat) {
@@ -3387,16 +3349,17 @@ final class LittleSpacesPopup: NSView, NSTextFieldDelegate {
         empty.alignment = .center
         empty.textColor = .secondaryLabelColor
         addSubview(empty)
-        applyPalette()
-        rebuild()
+        applyPalette(SpaceChromeColors(store.displayTheme(for: store.space(state.targetSpaceID) ?? store.focusedSpace).palette))
     }
 
-    func applyPalette() {
-        let palette = LittlePalette.current
-        layer?.backgroundColor = palette.button.cgColor
-        layer?.borderColor = palette.border.cgColor
-        divider.layer?.backgroundColor = palette.border.cgColor
-        refreshSelection()
+    private var selectionColor = NSColor.clear
+
+    func applyPalette(_ colors: SpaceChromeColors) {
+        layer?.backgroundColor = colors.surface.cgColor
+        layer?.borderColor = colors.outline.cgColor
+        divider.layer?.backgroundColor = colors.outline.cgColor
+        selectionColor = colors.hover
+        rebuild()
     }
 
     required init?(coder: NSCoder) { fatalError() }
@@ -3460,7 +3423,7 @@ final class LittleSpacesPopup: NSView, NSTextFieldDelegate {
 
     private func refreshSelection() {
         for (i, r) in rows.enumerated() {
-            r.layer?.backgroundColor = i == selected ? LittlePalette.current.hover.cgColor : nil
+            r.layer?.backgroundColor = i == selected ? selectionColor.cgColor : nil
         }
     }
 

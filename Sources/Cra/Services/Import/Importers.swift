@@ -221,7 +221,7 @@ enum ArcImporter {
             }
             // A space without a theme is Arc's default dark purple, close to Ink. Not the next
             // preset: that shifted every later space onto another colour (issue #30).
-            var sp = ImportedSpace(title: title, emoji: icon.emoji, symbol: icon.symbol, theme: ArcThemeImport.theme(from: space) ?? SpaceTheme.presets[0])
+            var sp = ImportedSpace(title: title, emoji: icon.emoji, symbol: icon.symbol, theme: ArcThemeImport.theme(from: space) ?? .arcDefault)
             let profile = space["profile"] as? NSDictionary
             sp.favorites = favoritesByProfile.first { $0.profile.isEqual(profile) }?.items ?? allFavorites
             sp.profile = ImportProfileMap.arcProfileFolder(space["profile"]).map { ImportedProfile(folder: $0, name: profileNames[$0] ?? $0) }

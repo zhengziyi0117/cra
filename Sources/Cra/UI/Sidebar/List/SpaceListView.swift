@@ -115,6 +115,7 @@ final class SpaceListView: NSView, NSDraggingSource {
     private let todayHighlight = CALayer()
     private let dropLine = CAShapeLayer()
     private let jumpPill = SidebarJumpPill()
+    private var jumpColors: SpaceChromeColors?
     private var syncQueued = false
     private var synced = false
     private var laidOutWidth: CGFloat = -1
@@ -528,6 +529,7 @@ final class SpaceListView: NSView, NSDraggingSource {
     private func apply(_ b: Built) {
         let wasSynced = synced
         palette = b.palette
+        jumpColors = nil
         (scrollView.verticalScroller as? SidebarScroller)?.isDarkTheme = b.palette.isDark
         let newColors = SidebarColors(b.palette)
         let recolor = newColors != colors
@@ -858,9 +860,11 @@ final class SpaceListView: NSView, NSDraggingSource {
         }
         let icons = tabs.map { id -> (image: NSImage?, flip: Bool, key: String?) in
             let key = store.item(id)?.tab?.iconKey
-            return (favicons.image(forKey: key), favicons.glyphIsDark(forKey: key) == true, key)
+            return (favicons.image(forKey: key), favicons.glyphIsDark(forKey: key) == colors.isDark, key)
         }
-        jumpPill.show(edge: edge, icons: icons, animated: animated && window != nil)
+        if edge != nil, jumpColors == nil { jumpColors = SpaceChromeColors(palette) }
+        let surface = (edge == .top ? jumpColors?.gradient.first : jumpColors?.gradient.last) ?? .windowBackgroundColor
+        jumpPill.show(edge: edge, icons: icons, colors: colors, surface: surface, animated: animated && window != nil)
         guard let edge else { return }
         let size = SidebarJumpPill.size(icons: min(3, icons.count))
         let y = edge == .top ? SidebarJumpPill.inset : bounds.height - SidebarJumpPill.inset - size.height

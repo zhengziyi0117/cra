@@ -175,21 +175,11 @@ final class ShinyToast {
         panel.setFrame(window.convertToScreen(local.insetBy(dx: -Self.margin, dy: -Self.margin)), display: false)
     }
 
-    /// Shows `text` at the top right of `page` (window coordinates) over `window`'s pages.
-    typealias Colors = (top: NSColor, bottom: NSColor, outline: NSColor, text: NSColor)
-
     /// `onClose`: the toast stays until its ✕ is pressed (or its action runs), and this is told
     /// then; something Cra has to be sure the user saw. Without it, the toast goes on its time.
     /// `second`: another text button after `action`'s (neither with a glyph).
     func show(_ text: String, keyCap: (keys: String, after: String)? = nil, action: Action? = nil, second: Action? = nil, page: NSRect,
               in window: NSWindow, theme: SpaceTheme, onClose: (() -> Void)? = nil, onTap: (() -> Void)? = nil) {
-        show(text, keyCap: keyCap, action: action, second: second, page: page, in: window, colors: Self.colors(theme), onClose: onClose, onTap: onTap)
-    }
-
-    /// `keyCap`: `text`, then the keys in a cap, then `after` (no button with it). `onTap`: the whole
-    /// toast is a button that runs it.
-    func show(_ text: String, keyCap: (keys: String, after: String)? = nil, action: Action? = nil, second: Action? = nil, page: NSRect,
-              in window: NSWindow, colors: Colors, onClose: (() -> Void)? = nil, onTap: (() -> Void)? = nil) {
         self.action = action
         self.second = action?.symbol == nil ? action.flatMap { _ in second } : nil
         self.onTap = onTap
@@ -224,10 +214,6 @@ final class ShinyToast {
         pill.anchorPoint = CGPoint(x: 0.5, y: 1)
         pill.bounds = CGRect(x: 0, y: 0, width: width, height: height)
         pill.position = CGPoint(x: Self.margin + width / 2, y: Self.margin + height)
-        // Top to bottom (a layer's y runs up).
-        pill.colors = [colors.bottom.cgColor, colors.top.cgColor]
-        pill.borderColor = colors.outline.cgColor
-        label.foregroundColor = colors.text.cgColor
         label.contentsScale = scale
         label.string = text
         let lineHeight = ceil(Self.font.ascender - Self.font.descender)
@@ -240,15 +226,12 @@ final class ShinyToast {
             label.alignmentMode = .left
             label.frame = CGRect(x: Self.padding, y: (height - lineHeight) / 2, width: lead, height: lineHeight)
             cap.frame = CGRect(x: Self.padding + capLead, y: (height - Self.capHeight) / 2, width: capWidth, height: Self.capHeight)
-            cap.backgroundColor = colors.text.withAlphaComponent(0.1).cgColor
             let capLine = ceil(Self.capFont.ascender - Self.capFont.descender)
             capLabel.frame = CGRect(x: cap.frame.minX, y: (height - capLine) / 2, width: capWidth, height: capLine)
             capLabel.string = keyCap.keys
-            capLabel.foregroundColor = colors.text.cgColor
             capLabel.contentsScale = scale
             labelAfter.frame = CGRect(x: cap.frame.maxX + Self.capGap, y: (height - lineHeight) / 2, width: afterWidth, height: lineHeight)
             labelAfter.string = keyCap.after
-            labelAfter.foregroundColor = colors.text.cgColor
             labelAfter.contentsScale = scale
         } else {
             label.alignmentMode = .center
@@ -256,18 +239,11 @@ final class ShinyToast {
         button.isHidden = buttonWidth == nil
         buttonLabel.isHidden = glyph != nil
         buttonGlyph.isHidden = glyph == nil
-        if let glyph {
-            // A wash of white over the pill (60 % on a light toast, 15 % on a dark one) with an
-            // outline of the text colour, the glyph in the text colour.
-            let dark = (colors.text.usingColorSpace(.sRGB)?.brightnessComponent ?? 0) > 0.5
+        if glyph != nil {
             let b = Self.glyphButton
             button.frame = CGRect(x: width - Self.glyphPadding - b.width, y: (height - b.height) / 2, width: b.width, height: b.height)
             button.cornerRadius = 7
             button.borderWidth = 1
-            button.borderColor = colors.text.withAlphaComponent(dark ? 0.2 : 0.3).cgColor
-            button.backgroundColor = (colors.top.blended(withFraction: dark ? 0.15 : 0.6, of: .white) ?? colors.top).cgColor
-            let config = NSImage.SymbolConfiguration(pointSize: 13, weight: .medium).applying(.init(paletteColors: [colors.text]))
-            buttonGlyph.contents = NSImage(systemSymbolName: glyph, accessibilityDescription: action?.title)?.withSymbolConfiguration(config)
             buttonGlyph.contentsScale = scale
             buttonGlyph.frame = CGRect(origin: .zero, size: b)
         } else if let buttonWidth, let action {
@@ -275,9 +251,6 @@ final class ShinyToast {
             button.borderWidth = 0
             let inset = (Self.height - Self.buttonHeight) / 2
             button.frame = CGRect(x: width - inset - closeRoom - secondRoom - buttonWidth, y: inset, width: buttonWidth, height: Self.buttonHeight)
-            buttonTint = colors.text
-            button.backgroundColor = colors.text.withAlphaComponent(0.1).cgColor
-            buttonLabel.foregroundColor = colors.text.cgColor
             buttonLabel.contentsScale = scale
             buttonLabel.string = action.title
             let buttonLine = ceil(Self.buttonFont.ascender - Self.buttonFont.descender)
@@ -287,8 +260,6 @@ final class ShinyToast {
         if let secondWidth, let second = self.second {
             let inset = (Self.height - Self.buttonHeight) / 2
             secondButton.frame = CGRect(x: width - inset - closeRoom - secondWidth, y: inset, width: secondWidth, height: Self.buttonHeight)
-            secondButton.backgroundColor = colors.text.withAlphaComponent(0.1).cgColor
-            secondLabel.foregroundColor = colors.text.cgColor
             secondLabel.contentsScale = scale
             secondLabel.string = second.title
             let line = ceil(Self.buttonFont.ascender - Self.buttonFont.descender)
@@ -300,17 +271,15 @@ final class ShinyToast {
             closeButton.frame = CGRect(x: width - (height - s) / 2 - s, y: (height - s) / 2, width: s, height: s)
             // Only the glyph at rest; the round fill shows under the pointer (moved(to:)).
             closeButton.backgroundColor = NSColor.clear.cgColor
-            let config = NSImage.SymbolConfiguration(pointSize: 11, weight: .semibold).applying(.init(paletteColors: [colors.text]))
-            closeGlyph.contents = NSImage(systemSymbolName: "xmark", accessibilityDescription: "Close")?.withSymbolConfiguration(config)
             closeGlyph.contentsScale = scale
             closeGlyph.frame = CGRect(x: 0, y: 0, width: s, height: s)
-            buttonTint = colors.text
         }
-        CATransaction.commit()
         let clickable = action != nil || persistent || onTap != nil
         panel.ignoresMouseEvents = !clickable
         view.handRect = onTap == nil ? .zero : NSRect(x: Self.margin, y: Self.margin, width: width, height: height)
         view.hitRect = !clickable ? .zero : NSRect(x: Self.margin, y: Self.margin, width: width, height: height)
+        apply(SpaceChromeColors(theme.palette))
+        CATransaction.commit()
         if !isShown {
             // Opening the tab's page holds the main thread for ~0.1 s, so the toast waits for the
             // next turn, invisible: started now, its first frame showed it most of the way in.
@@ -491,29 +460,37 @@ final class ShinyToast {
         CATransaction.commit()
     }
 
-    /// Arc builds it from the space's background (ShinyToastBackgroundBasedPalette): the theme's hue,
-    /// pale with black text on a light theme, deep with white text on a dark one, a little darker
-    /// at the bottom, outlined darker still. Fitted to one Arc theme of each kind (2 Nov 2026, sRGB):
-    /// light (Victor's yellow/green) 220/226/184 → 208/218/163, outline 151/157/124; dark (the
-    /// default theme in dark mode) 43/24/102 → 33/19/79, outline 26/15/62, white text.
-    static func colors(_ theme: SpaceTheme) -> Colors {
-        let theme = theme.shown
-        let comps = theme.colors.compactMap(HexColor.components)
-        let n = Double(max(comps.count, 1))
-        let mean = NSColor(srgbRed: comps.reduce(0) { $0 + $1.r } / n, green: comps.reduce(0) { $0 + $1.g } / n,
-                           blue: comps.reduce(0) { $0 + $1.b } / n, alpha: 1)
-        let hue = mean.hueComponent, sat = comps.isEmpty ? 0 : mean.saturationComponent
-        func color(_ s: CGFloat, _ b: CGFloat) -> NSColor {
-            NSColor(hue: hue, saturation: s, brightness: b, alpha: 1).usingColorSpace(.sRGB) ?? .gray
+    func updateColors(_ colors: @autoclosure () -> SpaceChromeColors) {
+        guard isShown else { return }
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        apply(colors())
+        CATransaction.commit()
+    }
+
+    private func apply(_ colors: SpaceChromeColors) {
+        pill.startPoint = CGPoint(x: 0, y: 1)
+        pill.endPoint = CGPoint(x: 1, y: 0)
+        pill.colors = colors.gradient.map(\.cgColor)
+        pill.borderColor = colors.outline.cgColor
+        buttonTint = colors.text
+        for layer in [label, labelAfter, capLabel, buttonLabel, secondLabel] {
+            layer.foregroundColor = colors.text.cgColor
         }
-        if theme.isDark {
-            let s = min(0.76, sat * 1.9)
-            let top = color(s, 0.40)
-            return (top, color(s, 0.31), color(s, 0.24), .white)
+        cap.backgroundColor = colors.pill.cgColor
+        let pointer = view.convert(panel.mouseLocationOutsideOfEventStream, from: nil)
+        washButtons(view.hitRect.contains(pointer))
+        if let symbol = action?.symbol {
+            button.borderColor = colors.outline.cgColor
+            button.backgroundColor = colors.pill.cgColor
+            let config = NSImage.SymbolConfiguration(pointSize: 13, weight: .medium).applying(.init(paletteColors: [colors.text]))
+            buttonGlyph.contents = NSImage(systemSymbolName: symbol, accessibilityDescription: action?.title)?.withSymbolConfiguration(config)
         }
-        let s = min(0.19, sat * 0.3)
-        let top = color(s, 0.89)
-        return (top, color(min(0.25, s * 1.3), 0.85), color(s, 0.61), .black)
+        if persistent {
+            let config = NSImage.SymbolConfiguration(pointSize: 11, weight: .semibold).applying(.init(paletteColors: [colors.text]))
+            closeGlyph.contents = NSImage(systemSymbolName: "xmark", accessibilityDescription: "Close")?.withSymbolConfiguration(config)
+            moved(to: pointer)
+        }
     }
 }
 
